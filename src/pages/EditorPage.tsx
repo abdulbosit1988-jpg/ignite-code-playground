@@ -110,12 +110,13 @@ const Editor_ = () => {
     monaco.editor.setTheme(theme);
 
     // Ctrl/Cmd + scroll = font size
-    editor.onMouseWheel?.((e: any) => {
-      if (e.event.ctrlKey || e.event.metaKey) {
-        e.event.preventDefault?.();
-        setFontSize((f) => Math.max(8, Math.min(40, f + (e.event.deltaY < 0 ? 1 : -1))));
+    const dom = editor.getDomNode();
+    dom?.addEventListener("wheel", (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        setFontSize((f) => Math.max(8, Math.min(40, f + (e.deltaY < 0 ? 1 : -1))));
       }
-    });
+    }, { passive: false });
   };
 
   useEffect(() => { monacoRef.current?.editor.setTheme(theme); }, [theme]);
