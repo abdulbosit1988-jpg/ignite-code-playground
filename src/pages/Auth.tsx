@@ -13,6 +13,7 @@ const schema = z.object({
   email: z.string().trim().email("Некорректный email").max(255),
   password: z.string().min(6, "Минимум 6 символов").max(72),
   display_name: z.string().trim().min(1, "Введите имя").max(50).optional(),
+  last_name: z.string().trim().min(1, "Введите фамилию").max(50).optional(),
 });
 
 const Auth = () => {
@@ -22,6 +23,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -30,17 +32,30 @@ const Auth = () => {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const parse = schema.safeParse({ email, password, display_name: mode === "signup" ? name : undefined });
+    const parse = schema.safeParse({
+      email,
+      password,
+      display_name: mode === "signup" ? name : undefined,
+      last_name: mode === "signup" ? lastName : undefined,
+    });
     if (!parse.success) { toast.error(parse.error.issues[0].message); return; }
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email, password,
-          options: { emailRedirectTo: `${window.location.origin}/dashboard`, data: { display_name: name } },
+          options: {
+            emailRedirectTo: `${window.location.origin}/dashboard`,
+            data: { display_name: name, last_name: lastName },
+          },
         });
         if (error) throw error;
-        toast.success("Аккаунт создан! Входим...");
+        // Если сессия не создана (например, нужно подтверждение) — пробуем войти сразу
+        if (!data.session) {
+          const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+          if (signInErr) throw signInErr;
+        }
+        toast.success("Аккаунт создан!");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -68,10 +83,16 @@ const Auth = () => {
 
         <form onSubmit={submit} className="space-y-4">
           {mode === "signup" && (
-            <div>
-              <Label htmlFor="name">Имя</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Иван" required />
-            </div>
+            <>
+              <div>
+                <Label htmlFor="name">Имя</Label>
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Иван" required />
+              </div>
+              <div>
+                <Label htmlFor="last_name">Фамилия</Label>
+                <Input id="last_name" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Иванов" required />
+              </div>
+            </>
           )}
           <div>
             <Label htmlFor="email">Email</Label>
