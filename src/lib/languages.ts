@@ -1,4 +1,4 @@
-export type LangKey = "python" | "html" | "css" | "javascript" | "go" | "java";
+export type LangKey = "python" | "html" | "css" | "javascript" | "go" | "java" | "text";
 
 export const LANGUAGES: { key: LangKey; name: string; ext: string; color: string; icon: string; runnable: boolean; starter: string }[] = [
   {
@@ -25,7 +25,20 @@ export const LANGUAGES: { key: LangKey; name: string; ext: string; color: string
     key: "java", name: "Java", ext: "java", color: "text-syntax-orange", icon: "☕", runnable: false,
     starter: `public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, World!");\n    }\n}\n`,
   },
+  {
+    key: "text", name: "Text", ext: "txt", color: "text-muted-foreground", icon: "📄", runnable: false,
+    starter: ``,
+  },
 ];
+
+export const guessLangByName = (name: string): LangKey => {
+  const ext = name.split(".").pop()?.toLowerCase() || "";
+  const map: Record<string, LangKey> = {
+    py: "python", html: "html", htm: "html", css: "css", js: "javascript", mjs: "javascript",
+    go: "go", java: "java", txt: "text", md: "text", json: "javascript",
+  };
+  return map[ext] || "text";
+};
 
 export const EDITOR_THEMES = [
   { key: "vs-dark", name: "VS Dark", color: "#1e1e1e" },

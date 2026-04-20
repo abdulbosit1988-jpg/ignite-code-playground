@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LANGUAGES, LangKey } from "@/lib/languages";
-import { Code2, FolderOpen, Plus, LogOut, Shield, Copy, Users, Trash2 } from "lucide-react";
+import { Code2, FolderOpen, Plus, LogOut, Shield, Copy, Users, Trash2, Settings as SettingsIcon } from "lucide-react";
+import { FileExplorer } from "@/components/FileExplorer";
 import { toast } from "sonner";
 
 interface Project { id: string; name: string; language: string; updated_at: string; }
@@ -60,26 +61,29 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-border glass sticky top-0 z-20">
+      <header className="border-b border-border sticky top-0 z-20 backdrop-blur" style={{ background: `hsl(var(--navbar) / 0.92)` }}>
         <div className="container flex items-center justify-between h-16">
-          <div className="flex items-center gap-2">
-            <Code2 className="w-6 h-6 text-primary" />
-            <span className="font-bold">Online Coding</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <Code2 className="w-6 h-6 text-primary shrink-0" />
+            <span className="font-bold truncate">Online Coding</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {isAdmin && (
               <Button variant="outline" size="sm" onClick={() => nav("/admin")}>
-                <Shield className="w-4 h-4 mr-1" /> Admin
+                <Shield className="w-4 h-4 sm:mr-1" /> <span className="hidden sm:inline">Admin</span>
               </Button>
             )}
+            <Button variant="ghost" size="icon" onClick={() => nav("/settings")} title="Настройки">
+              <SettingsIcon className="w-4 h-4" />
+            </Button>
             <Button variant="ghost" size="sm" onClick={async () => { await signOut(); nav("/"); }}>
-              <LogOut className="w-4 h-4 mr-1" /> Выйти
+              <LogOut className="w-4 h-4 sm:mr-1" /> <span className="hidden sm:inline">Выйти</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="container py-8 space-y-8">
+      <div className="container py-4 sm:py-8 space-y-6 sm:space-y-8">
         <div className="glass rounded-xl p-6 flex flex-wrap gap-4 items-center justify-between">
           <div>
             <p className="text-sm text-muted-foreground mb-1">Привет, {user?.email}</p>
@@ -131,14 +135,14 @@ const Dashboard = () => {
             Пока нет проектов. Нажми «Новый», чтобы начать.
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.map((p) => {
               const lconf = LANGUAGES.find((l) => l.key === p.language);
               return (
                 <div key={p.id} className="glass rounded-xl p-5 group hover:border-primary/50 transition-all cursor-pointer" onClick={() => nav(`/editor/${p.id}`)}>
                   <div className="flex items-start justify-between mb-3">
                     <span className="text-3xl">{lconf?.icon}</span>
-                    <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); remove(p.id); }}>
+                    <Button variant="ghost" size="icon" className="sm:opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); remove(p.id); }}>
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   </div>
@@ -149,6 +153,16 @@ const Dashboard = () => {
             })}
           </div>
         )}
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Мои файлы и папки</h2>
+          <div className="glass rounded-xl overflow-hidden h-[420px]">
+            <FileExplorer onOpenFile={(f) => {
+              // Open file in a temporary editor route via projects (create one-shot)
+              toast.info(`Открыто: ${f.name}`);
+            }} />
+          </div>
+        </div>
       </div>
     </div>
   );

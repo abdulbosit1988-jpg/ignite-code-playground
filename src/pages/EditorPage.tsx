@@ -10,7 +10,7 @@ import { RunnerPanel } from "@/components/RunnerPanel";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ArrowLeft, Save, Terminal as TermIcon, Pipette, Wand2,
-  ZoomIn, ZoomOut, Users, Loader2, Globe,
+  ZoomIn, ZoomOut, Users, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -133,17 +133,15 @@ const Editor_ = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      <header className="border-b border-border glass flex items-center px-3 h-12 gap-2 shrink-0">
+      <header className="border-b border-border flex items-center px-2 sm:px-3 h-12 gap-1 sm:gap-2 shrink-0 overflow-x-auto" style={{ background: `hsl(var(--navbar) / 0.95)` }}>
         <Button variant="ghost" size="icon" onClick={() => nav("/dashboard")}><ArrowLeft className="w-4 h-4" /></Button>
-        <span className="text-2xl">{lconf?.icon}</span>
-        <div className="flex-1 min-w-0">
+        <span className="text-2xl shrink-0">{lconf?.icon}</span>
+        <div className="flex-1 min-w-0 hidden sm:block">
           <p className="font-medium truncate text-sm">{project.name}{isShared && " (shared)"}</p>
           <p className="text-xs text-muted-foreground">{lconf?.name} · {saving ? "сохранение..." : "сохранено"}</p>
         </div>
 
-        <div className="flex items-center gap-1">
-          <span title="Google" className="px-2"><Globe className="w-4 h-4 text-syntax-blue" /></span>
-
+        <div className="flex items-center gap-1 shrink-0">
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon" title="Пипетка — сменить тему"><Pipette className="w-4 h-4" /></Button>
@@ -162,21 +160,23 @@ const Editor_ = () => {
 
           <Button variant="ghost" size="icon" onClick={autoTheme} title="Автоматическая тема"><Wand2 className="w-4 h-4" /></Button>
 
-          <Button variant="ghost" size="icon" onClick={() => setFontSize((f) => Math.max(8, f - 1))} title="Уменьшить"><ZoomOut className="w-4 h-4" /></Button>
-          <span className="text-xs w-8 text-center">{fontSize}</span>
-          <Button variant="ghost" size="icon" onClick={() => setFontSize((f) => Math.min(40, f + 1))} title="Увеличить"><ZoomIn className="w-4 h-4" /></Button>
+          <div className="hidden md:flex items-center">
+            <Button variant="ghost" size="icon" onClick={() => setFontSize((f) => Math.max(8, f - 1))} title="Уменьшить"><ZoomOut className="w-4 h-4" /></Button>
+            <span className="text-xs w-8 text-center">{fontSize}</span>
+            <Button variant="ghost" size="icon" onClick={() => setFontSize((f) => Math.min(40, f + 1))} title="Увеличить"><ZoomIn className="w-4 h-4" /></Button>
+          </div>
 
           <Button variant="ghost" size="icon" onClick={() => setShowTerm((s) => !s)} title="Терминал"><TermIcon className="w-4 h-4" /></Button>
 
-          <div className="flex items-center gap-1 px-2 text-xs text-muted-foreground">
+          <div className="hidden sm:flex items-center gap-1 px-2 text-xs text-muted-foreground">
             <Users className="w-3 h-3" /> {collaborators}
           </div>
-          <Button size="sm" variant="outline" onClick={() => saveCode(code)}><Save className="w-4 h-4 mr-1" />Save</Button>
+          <Button size="sm" variant="outline" onClick={() => saveCode(code)}><Save className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Save</span></Button>
         </div>
       </header>
 
-      <div className="flex-1 grid grid-cols-2 overflow-hidden">
-        <div className="border-r border-border">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 overflow-hidden">
+        <div className="border-b md:border-b-0 md:border-r border-border min-h-[40vh] md:min-h-0">
           <Editor
             height="100%"
             language={project.language === "javascript" ? "javascript" : project.language}
