@@ -10,7 +10,7 @@ import { RunnerPanel } from "@/components/RunnerPanel";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ArrowLeft, Save, Terminal as TermIcon, Pipette, Wand2,
-  ZoomIn, ZoomOut, Users, Loader2, Globe,
+  ZoomIn, ZoomOut, Users, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
