@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LANGUAGES, LangKey } from "@/lib/languages";
-import { Code2, FolderOpen, Plus, LogOut, Shield, Copy, Users, Trash2 } from "lucide-react";
+import { Code2, FolderOpen, Plus, LogOut, Shield, Copy, Users, Trash2, Settings as SettingsIcon } from "lucide-react";
+import { FileExplorer } from "@/components/FileExplorer";
 import { toast } from "sonner";
 
 interface Project { id: string; name: string; language: string; updated_at: string; }
@@ -60,26 +61,29 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-border glass sticky top-0 z-20">
+      <header className="border-b border-border sticky top-0 z-20 backdrop-blur" style={{ background: `hsl(var(--navbar) / 0.92)` }}>
         <div className="container flex items-center justify-between h-16">
-          <div className="flex items-center gap-2">
-            <Code2 className="w-6 h-6 text-primary" />
-            <span className="font-bold">Online Coding</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <Code2 className="w-6 h-6 text-primary shrink-0" />
+            <span className="font-bold truncate">Online Coding</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {isAdmin && (
               <Button variant="outline" size="sm" onClick={() => nav("/admin")}>
-                <Shield className="w-4 h-4 mr-1" /> Admin
+                <Shield className="w-4 h-4 sm:mr-1" /> <span className="hidden sm:inline">Admin</span>
               </Button>
             )}
+            <Button variant="ghost" size="icon" onClick={() => nav("/settings")} title="Настройки">
+              <SettingsIcon className="w-4 h-4" />
+            </Button>
             <Button variant="ghost" size="sm" onClick={async () => { await signOut(); nav("/"); }}>
-              <LogOut className="w-4 h-4 mr-1" /> Выйти
+              <LogOut className="w-4 h-4 sm:mr-1" /> <span className="hidden sm:inline">Выйти</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="container py-8 space-y-8">
+      <div className="container py-4 sm:py-8 space-y-6 sm:space-y-8">
         <div className="glass rounded-xl p-6 flex flex-wrap gap-4 items-center justify-between">
           <div>
             <p className="text-sm text-muted-foreground mb-1">Привет, {user?.email}</p>
