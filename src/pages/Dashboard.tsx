@@ -135,14 +135,14 @@ const Dashboard = () => {
             Пока нет проектов. Нажми «Новый», чтобы начать.
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.map((p) => {
               const lconf = LANGUAGES.find((l) => l.key === p.language);
               return (
                 <div key={p.id} className="glass rounded-xl p-5 group hover:border-primary/50 transition-all cursor-pointer" onClick={() => nav(`/editor/${p.id}`)}>
                   <div className="flex items-start justify-between mb-3">
                     <span className="text-3xl">{lconf?.icon}</span>
-                    <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); remove(p.id); }}>
+                    <Button variant="ghost" size="icon" className="sm:opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); remove(p.id); }}>
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   </div>
@@ -153,6 +153,16 @@ const Dashboard = () => {
             })}
           </div>
         )}
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Мои файлы и папки</h2>
+          <div className="glass rounded-xl overflow-hidden h-[420px]">
+            <FileExplorer onOpenFile={(f) => {
+              // Open file in a temporary editor route via projects (create one-shot)
+              toast.info(`Открыто: ${f.name}`);
+            }} />
+          </div>
+        </div>
       </div>
     </div>
   );
