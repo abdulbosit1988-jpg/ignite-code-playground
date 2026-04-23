@@ -249,7 +249,7 @@ const Editor_ = () => {
         </div>
         <div className="flex flex-col">
           <div className={showTerm ? "h-1/2" : "h-full"}>
-            <RunnerPanel code={code} language={project.language as LangKey} />
+            <RunnerPanel code={code} language={project.language as LangKey} onPythonRun={() => setShowTerm(true)} />
           </div>
           {showTerm && (
             <div className="h-1/2 border-t border-border">
