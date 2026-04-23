@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
+import { registerSnippets } from "@/lib/editorSnippets";
 
 const Editor_ = () => {
   const { id, code: invite } = useParams();
