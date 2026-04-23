@@ -35,6 +35,14 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Нельзя удалить себя" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Super-admin protection: only the super-admin can delete the super-admin account
+    const SUPER_ADMIN_EMAIL = "abdulbosit1988@gmail.com";
+    const { data: targetProfile } = await admin.from("profiles").select("email").eq("user_id", user_id).maybeSingle();
+    const targetEmail = (targetProfile as any)?.email as string | undefined;
+    if (targetEmail === SUPER_ADMIN_EMAIL && userData.user.email !== SUPER_ADMIN_EMAIL) {
+      return new Response(JSON.stringify({ error: "Этого администратора может удалить только владелец" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // Cascade clean app data first
     await admin.from("files").delete().eq("user_id", user_id);
     await admin.from("projects").delete().eq("user_id", user_id);
