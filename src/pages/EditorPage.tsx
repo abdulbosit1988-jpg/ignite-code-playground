@@ -57,8 +57,17 @@ const Editor_ = () => {
       const ch = supabase.channel(`project:${projectId}`, { config: { presence: { key: user?.id || "anon" } } });
       ch.on("postgres_changes", { event: "UPDATE", schema: "public", table: "projects", filter: `id=eq.${projectId}` }, (payload) => {
         const newCode = (payload.new as any).code;
-        if (newCode !== undefined && newCode !== editorRef.current?.getValue()) {
+        const ed = editorRef.current;
+        if (newCode !== undefined && ed && newCode !== ed.getValue()) {
+          // Preserve cursor/selection when applying remote update
+          const sel = ed.getSelection();
           remoteUpdate.current = true;
+          ed.executeEdits("remote", [{
+            range: ed.getModel().getFullModelRange(),
+            text: newCode,
+            forceMoveMarkers: true,
+          }]);
+          if (sel) ed.setSelection(sel);
           setCode(newCode);
         }
       });
@@ -81,9 +90,13 @@ const Editor_ = () => {
     setSaving(false);
   }, [project, theme]);
 
+  // Debounced auto-save — does NOT re-render the editor (saves the latest value via ref)
+  const codeRef = useRef(code);
+  useEffect(() => { codeRef.current = code; }, [code]);
   useEffect(() => {
-    if (!project || remoteUpdate.current) { remoteUpdate.current = false; return; }
-    const t = setTimeout(() => saveCode(code), 800);
+    if (!project) return;
+    if (remoteUpdate.current) { remoteUpdate.current = false; return; }
+    const t = setTimeout(() => saveCode(codeRef.current), 1200);
     return () => clearTimeout(t);
   }, [code, project, saveCode]);
 
@@ -238,8 +251,8 @@ const Editor_ = () => {
           <Editor
             height="100%"
             language={project.language === "javascript" ? "javascript" : project.language}
-            value={code}
-            onChange={(v) => setCode(v || "")}
+            defaultValue={code}
+            onChange={(v) => setCode(v ?? "")}
             onMount={handleMount}
             options={{
               fontSize, fontFamily: "JetBrains Mono, monospace",
