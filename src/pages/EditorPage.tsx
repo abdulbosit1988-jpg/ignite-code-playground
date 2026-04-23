@@ -130,6 +130,32 @@ const Editor_ = () => {
     toast.success(`Тема: ${t}`);
   };
 
+  const callAi = async (mode: "fix" | "generate" | "explain", instruction = "") => {
+    if (!project) return;
+    setAiBusy(true);
+    const tId = toast.loading(mode === "fix" ? "ИИ исправляет код..." : mode === "generate" ? "ИИ пишет код..." : "ИИ анализирует...");
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-fix", {
+        body: { code, language: project.language, mode, instruction },
+      });
+      toast.dismiss(tId);
+      if (error || (data as any)?.error) {
+        toast.error((data as any)?.error || error?.message || "Ошибка ИИ");
+        return;
+      }
+      const result = (data as any).result as string;
+      if (mode === "explain") {
+        toast.message("Объяснение от ИИ", { description: result, duration: 15000 });
+      } else {
+        setCode(result);
+        toast.success(mode === "fix" ? "Код исправлен ✨" : "Код сгенерирован ✨");
+      }
+    } catch (e: any) {
+      toast.dismiss(tId);
+      toast.error(e.message || "Ошибка");
+    } finally { setAiBusy(false); }
+  };
+
   const lconf = LANGUAGES.find((l) => l.key === project?.language);
 
   if (!project) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
