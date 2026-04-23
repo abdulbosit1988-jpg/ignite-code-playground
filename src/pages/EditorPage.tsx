@@ -189,13 +189,38 @@ const Editor_ = () => {
 
           <Button variant="ghost" size="icon" onClick={autoTheme} title="Автоматическая тема"><Wand2 className="w-4 h-4" /></Button>
 
+          {/* AI assistant */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" disabled={aiBusy} title="ИИ-ассистент">
+                {aiBusy ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Sparkles className="w-4 h-4 text-primary" />}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">ИИ-помощник ({lconf?.name})</p>
+              <Button size="sm" variant="secondary" className="w-full justify-start" disabled={aiBusy} onClick={() => callAi("fix")}>
+                <Sparkles className="w-3 h-3 mr-2" />Исправить ошибки
+              </Button>
+              <Button size="sm" variant="secondary" className="w-full justify-start" disabled={aiBusy} onClick={() => callAi("explain")}>
+                <Wand2 className="w-3 h-3 mr-2" />Объяснить код
+              </Button>
+              <div className="space-y-1 pt-1 border-t border-border">
+                <p className="text-xs text-muted-foreground">Сгенерировать код по заданию:</p>
+                <Textarea value={aiInstruction} onChange={(e) => setAiInstruction(e.target.value)} placeholder="Напиши функцию, которая..." className="text-xs min-h-[60px]" />
+                <Button size="sm" className="w-full" disabled={aiBusy || !aiInstruction.trim()} onClick={() => { callAi("generate", aiInstruction); setAiInstruction(""); }}>
+                  Сгенерировать
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <div className="hidden md:flex items-center">
             <Button variant="ghost" size="icon" onClick={() => setFontSize((f) => Math.max(8, f - 1))} title="Уменьшить"><ZoomOut className="w-4 h-4" /></Button>
             <span className="text-xs w-8 text-center">{fontSize}</span>
             <Button variant="ghost" size="icon" onClick={() => setFontSize((f) => Math.min(40, f + 1))} title="Увеличить"><ZoomIn className="w-4 h-4" /></Button>
           </div>
 
-          <Button variant="ghost" size="icon" onClick={() => setShowTerm((s) => !s)} title="Терминал"><TermIcon className="w-4 h-4" /></Button>
+          <Button variant={showTerm ? "default" : "ghost"} size="icon" onClick={() => setShowTerm((s) => !s)} title={showTerm ? "Скрыть терминал" : "Показать терминал"}><TermIcon className="w-4 h-4" /></Button>
 
           <div className="hidden sm:flex items-center gap-1 px-2 text-xs text-muted-foreground">
             <Users className="w-3 h-3" /> {collaborators}
