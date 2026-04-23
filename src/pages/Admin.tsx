@@ -4,9 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Download, Eye, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Eye, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface UserRow {
   user_id: string; email: string; display_name: string;
@@ -75,6 +79,16 @@ const Admin = () => {
     nav(`/editor/${data.id}`);
   };
 
+  const deleteUser = async (userId: string, email: string) => {
+    const { data, error } = await supabase.functions.invoke("admin-delete-user", { body: { user_id: userId } });
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || error?.message || "Ошибка удаления");
+      return;
+    }
+    setRows((rs) => rs.filter((r) => r.user_id !== userId));
+    toast.success(`Аккаунт ${email} удалён`);
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
 
   return (
@@ -127,7 +141,26 @@ const Admin = () => {
                     </div>
                   </td>
                   <td className="p-3">
-                    <Button variant="outline" size="sm" onClick={() => viewProjects(r.user_id)}><Eye className="w-3 h-3 mr-1" />Проект</Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => viewProjects(r.user_id)}><Eye className="w-3 h-3 mr-1" />Проект</Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" size="sm" title="Удалить аккаунт"><Trash2 className="w-3 h-3" /></Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Удалить аккаунт?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Аккаунт <b>{r.email}</b> и все его проекты, файлы и оценки будут удалены безвозвратно.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Отмена</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => deleteUser(r.user_id, r.email)}>Удалить</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </td>
                 </tr>
               ))}
