@@ -112,6 +112,9 @@ const Editor_ = () => {
     });
     monaco.editor.setTheme(theme);
 
+    // Register code snippets / completions for HTML and Python
+    registerSnippets(monaco);
+
     // Ctrl/Cmd + scroll = font size
     const dom = editor.getDomNode();
     dom?.addEventListener("wheel", (e: WheelEvent) => {
