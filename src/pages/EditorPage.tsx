@@ -10,9 +10,10 @@ import { RunnerPanel } from "@/components/RunnerPanel";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ArrowLeft, Save, Terminal as TermIcon, Pipette, Wand2,
-  ZoomIn, ZoomOut, Users, Loader2,
+  ZoomIn, ZoomOut, Users, Loader2, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 
 const Editor_ = () => {
   const { id, code: invite } = useParams();
@@ -27,6 +28,8 @@ const Editor_ = () => {
   const [showTerm, setShowTerm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [collaborators, setCollaborators] = useState(0);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiInstruction, setAiInstruction] = useState("");
   const remoteUpdate = useRef(false);
   const channelRef = useRef<any>(null);
   const isShared = !!invite;
