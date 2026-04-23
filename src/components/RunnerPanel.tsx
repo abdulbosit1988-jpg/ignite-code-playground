@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 declare global { interface Window { loadPyodide?: any; pyodide?: any; } }
 
-interface Props { code: string; language: LangKey; }
+interface Props { code: string; language: LangKey; onPythonRun?: () => void; }
 
 const buildHtml = (code: string, language: LangKey) => {
   if (language === "html") return code;
@@ -21,7 +21,7 @@ const buildHtml = (code: string, language: LangKey) => {
   </script></body></html>`;
 };
 
-export const RunnerPanel = ({ code, language }: Props) => {
+export const RunnerPanel = ({ code, language, onPythonRun }: Props) => {
   const { settings } = useSettings();
   const [output, setOutput] = useState<string>("");
   const [running, setRunning] = useState(false);
@@ -122,7 +122,7 @@ export const RunnerPanel = ({ code, language }: Props) => {
 
   const run = (mode: "inline" | "newtab" = settings.run_mode) => {
     if (language === "html" || language === "css" || language === "javascript") runWeb(mode);
-    else if (language === "python") runPython(mode);
+    else if (language === "python") { onPythonRun?.(); runPython(mode); }
     else runStaticHint();
   };
 
