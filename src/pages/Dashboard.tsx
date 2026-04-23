@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LANGUAGES, LangKey } from "@/lib/languages";
 import { Code2, FolderOpen, Plus, LogOut, Shield, Copy, Users, Trash2, Settings as SettingsIcon } from "lucide-react";
-import { FileExplorer } from "@/components/FileExplorer";
 import { toast } from "sonner";
 
 interface Project { id: string; name: string; language: string; updated_at: string; }
@@ -154,15 +153,6 @@ const Dashboard = () => {
           </div>
         )}
 
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Мои файлы и папки</h2>
-          <div className="glass rounded-xl overflow-hidden h-[420px]">
-            <FileExplorer onOpenFile={(f) => {
-              // Open file in a temporary editor route via projects (create one-shot)
-              toast.info(`Открыто: ${f.name}`);
-            }} />
-          </div>
-        </div>
       </div>
     </div>
   );

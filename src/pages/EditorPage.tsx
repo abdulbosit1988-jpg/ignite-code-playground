@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
+import { registerSnippets } from "@/lib/editorSnippets";
 
 const Editor_ = () => {
   const { id, code: invite } = useParams();
@@ -111,6 +112,9 @@ const Editor_ = () => {
       colors: { "editor.background": "#002b36", "editor.foreground": "#839496" },
     });
     monaco.editor.setTheme(theme);
+
+    // Register code snippets / completions for HTML and Python
+    registerSnippets(monaco);
 
     // Ctrl/Cmd + scroll = font size
     const dom = editor.getDomNode();
