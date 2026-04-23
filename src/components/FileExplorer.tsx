@@ -47,18 +47,44 @@ export const FileExplorer = ({ onOpenFile, activeFileId }: Props) => {
 
   const create = async () => {
     if (!creating || !newName.trim() || !user) { setCreating(null); setNewName(""); return; }
-    const lang = creating.kind === "file" ? guessLangByName(newName) : null;
+    const trimmed = newName.trim();
+    const lang = creating.kind === "file" ? guessLangByName(trimmed) : null;
     const { error } = await supabase.from("files").insert({
       user_id: user.id,
       parent_id: creating.parentId,
-      name: newName.trim(),
+      name: trimmed,
       kind: creating.kind,
       language: lang,
       mime: creating.kind === "file" ? "text/plain" : null,
-      content: "",
+      content: creating.kind === "file" && /\.html?$/i.test(trimmed)
+        ? `<!DOCTYPE html>\n<html lang="ru">\n<head>\n  <meta charset="UTF-8" />\n  <meta name="viewport" content="width=device-width,initial-scale=1" />\n  <title>${trimmed.replace(/\.html?$/i, "")}</title>\n  <link rel="stylesheet" href="${trimmed.replace(/\.html?$/i, ".css")}" />\n</head>\n<body>\n  <h1>Привет!</h1>\n</body>\n</html>`
+        : "",
     });
-    if (error) toast.error(error.message);
-    else { toast.success(`${creating.kind === "folder" ? "Папка" : "Файл"} создан`); if (creating.parentId) setExpanded((s) => new Set([...s, creating.parentId!])); load(); }
+    if (error) { toast.error(error.message); setCreating(null); setNewName(""); return; }
+
+    // Auto-create paired CSS file when creating an HTML file
+    if (creating.kind === "file" && /\.html?$/i.test(trimmed)) {
+      const cssName = trimmed.replace(/\.html?$/i, ".css");
+      const { data: existing } = await supabase.from("files").select("id").eq("user_id", user.id).eq("name", cssName).eq("parent_id", creating.parentId ?? null as any).maybeSingle();
+      if (!existing) {
+        await supabase.from("files").insert({
+          user_id: user.id,
+          parent_id: creating.parentId,
+          name: cssName,
+          kind: "file",
+          language: "css",
+          mime: "text/css",
+          content: `/* Стили для ${trimmed} */\nbody {\n  font-family: system-ui, sans-serif;\n  margin: 2rem;\n  background: #0f172a;\n  color: #fff;\n}\nh1 { color: #22c55e; }\n`,
+        });
+        toast.success("HTML и CSS созданы");
+      } else {
+        toast.success("Файл создан");
+      }
+    } else {
+      toast.success(`${creating.kind === "folder" ? "Папка" : "Файл"} создан`);
+    }
+    if (creating.parentId) setExpanded((s) => new Set([...s, creating.parentId!]));
+    load();
     setCreating(null); setNewName("");
   };
 

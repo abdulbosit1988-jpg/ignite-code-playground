@@ -1,1 +1,7 @@
 project_id = "dqgbczxrxopdcpjzwjhi"
+
+[functions.admin-delete-user]
+verify_jwt = true
+
+[functions.ai-fix]
+verify_jwt = false
