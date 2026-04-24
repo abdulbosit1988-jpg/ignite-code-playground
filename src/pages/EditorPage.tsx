@@ -311,8 +311,7 @@ const Editor_ = () => {
              </div>
            </div>
          )}
-        </div>
-       </div>
+         </div>
     </div>
   );
 };
