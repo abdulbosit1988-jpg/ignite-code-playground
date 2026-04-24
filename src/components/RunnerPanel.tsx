@@ -2,9 +2,15 @@ import { useEffect, useState } from "react";
 import { Play, Loader2 } from "lucide-react";
 import { LangKey } from "@/lib/languages";
 import { Button } from "@/components/ui/button";
+
 declare global { interface Window { loadPyodide?: any; pyodide?: any; } }
 
-interface Props { code: string; language: LangKey; onPythonRun?: () => void; runSignal?: number; }
+interface Props {
+  code: string;
+  language: LangKey;
+  onPythonRun?: () => void;
+  runSignal?: number;
+}
 
 export const RunnerPanel = ({ code, language, onPythonRun, runSignal = 0 }: Props) => {
   const [output, setOutput] = useState<string>("");
@@ -62,22 +68,18 @@ export const RunnerPanel = ({ code, language, onPythonRun, runSignal = 0 }: Prop
     }
   };
 
-  const runStaticHint = () => {
-    setOutput(`Запуск ${language} в этой панели не поддерживается.\nИспользуй верхнюю кнопку Run.`);
-  };
-
   const run = () => {
-    if (language === "python") {
-      onPythonRun?.();
-      runPython();
+    if (language !== "python") {
+      setOutput(`Запуск ${language} в этой панели не поддерживается.\nИспользуй верхнюю кнопку Run.`);
       return;
     }
-    runStaticHint();
+    onPythonRun?.();
+    runPython();
   };
 
   useEffect(() => {
     if (runSignal > 0 && language === "python") run();
-  }, [runSignal]);
+  }, [runSignal, language]);
 
   return (
     <div className="flex flex-col h-full bg-card">
