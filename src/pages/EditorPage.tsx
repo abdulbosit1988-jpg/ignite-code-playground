@@ -33,6 +33,7 @@ const Editor_ = () => {
   const [aiBusy, setAiBusy] = useState(false);
   const [aiInstruction, setAiInstruction] = useState("");
   const [linkedCss, setLinkedCss] = useState("");
+  const [runSignal, setRunSignal] = useState(0);
   const remoteUpdate = useRef(false);
   const channelRef = useRef<any>(null);
   const isShared = !!invite;
@@ -124,6 +125,7 @@ const Editor_ = () => {
     if (!project) return;
     if (project.language === "python") {
       setShowTerm(true);
+      setRunSignal((v) => v + 1);
       return;
     }
 
@@ -304,7 +306,7 @@ const Editor_ = () => {
          {showTerm && (
            <div className="h-[42svh] min-h-[260px] border-t border-border">
              <div className="h-1/2 border-b border-border">
-               <RunnerPanel code={code} language={project.language as LangKey} onPythonRun={() => setShowTerm(true)} />
+               <RunnerPanel code={code} language={project.language as LangKey} onPythonRun={() => setShowTerm(true)} runSignal={runSignal} />
              </div>
              <div className="h-1/2">
                <TerminalPanel onClose={() => setShowTerm(false)} />
