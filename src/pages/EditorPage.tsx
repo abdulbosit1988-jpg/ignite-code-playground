@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Editor, { OnMount } from "@monaco-editor/react";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,11 +10,12 @@ import { RunnerPanel } from "@/components/RunnerPanel";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ArrowLeft, Save, Terminal as TermIcon, Pipette, Wand2,
-  ZoomIn, ZoomOut, Users, Loader2, Sparkles,
+  ZoomIn, ZoomOut, Users, Loader2, Sparkles, Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { registerSnippets } from "@/lib/editorSnippets";
+import { buildPreviewHtml, openPreviewInNewTab } from "@/lib/runnerPreview";
 
 const Editor_ = () => {
   const { id, code: invite } = useParams();
@@ -31,9 +32,11 @@ const Editor_ = () => {
   const [collaborators, setCollaborators] = useState(0);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiInstruction, setAiInstruction] = useState("");
+  const [linkedCss, setLinkedCss] = useState("");
   const remoteUpdate = useRef(false);
   const channelRef = useRef<any>(null);
   const isShared = !!invite;
+  const saveTimerRef = useRef<number | null>(null);
 
   // Load project
   useEffect(() => {
@@ -96,9 +99,42 @@ const Editor_ = () => {
   useEffect(() => {
     if (!project) return;
     if (remoteUpdate.current) { remoteUpdate.current = false; return; }
-    const t = setTimeout(() => saveCode(codeRef.current), 1200);
-    return () => clearTimeout(t);
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(() => saveCode(codeRef.current), 1800);
+    return () => {
+      if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+    };
   }, [code, project, saveCode]);
+
+  useEffect(() => {
+    if (!project || project.language !== "html" || isShared) { setLinkedCss(""); return; }
+    (async () => {
+      const cssName = project.name.replace(/\.html?$/i, ".css");
+      const { data } = await supabase
+        .from("files")
+        .select("content")
+        .eq("user_id", project.user_id)
+        .eq("name", cssName)
+        .maybeSingle();
+      setLinkedCss((data as any)?.content || "");
+    })();
+  }, [project, isShared]);
+
+  const handleRun = useCallback(() => {
+    if (!project) return;
+    if (project.language === "python") {
+      setShowTerm(true);
+      return;
+    }
+
+    const html = buildPreviewHtml(codeRef.current, project.language as LangKey, linkedCss);
+    openPreviewInNewTab(html);
+  }, [project, linkedCss]);
+
+  const editorLanguage = useMemo(() => {
+    if (project?.language === "javascript") return "javascript";
+    return project?.language;
+  }, [project?.language]);
 
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -237,6 +273,7 @@ const Editor_ = () => {
             <Button variant="ghost" size="icon" onClick={() => setFontSize((f) => Math.min(40, f + 1))} title="Увеличить"><ZoomIn className="w-4 h-4" /></Button>
           </div>
 
+          <Button variant="default" size="sm" onClick={handleRun}><Play className="w-4 h-4 mr-1" />Run</Button>
           <Button variant={showTerm ? "default" : "ghost"} size="icon" onClick={() => setShowTerm((s) => !s)} title={showTerm ? "Скрыть терминал" : "Показать терминал"}><TermIcon className="w-4 h-4" /></Button>
 
           <div className="hidden sm:flex items-center gap-1 px-2 text-xs text-muted-foreground">
@@ -246,11 +283,11 @@ const Editor_ = () => {
         </div>
       </header>
 
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 overflow-hidden">
-        <div className="border-b md:border-b-0 md:border-r border-border min-h-[40vh] md:min-h-0">
+       <div className="flex-1 flex flex-col overflow-hidden">
+         <div className="flex-1 min-h-[40vh]">
           <Editor
             height="100%"
-            language={project.language === "javascript" ? "javascript" : project.language}
+            language={editorLanguage}
             defaultValue={code}
             onChange={(v) => setCode(v ?? "")}
             onMount={handleMount}
@@ -263,18 +300,19 @@ const Editor_ = () => {
               cursorBlinking: "smooth", padding: { top: 12 },
             }}
           />
+         </div>
+         {showTerm && (
+           <div className="h-[42svh] min-h-[260px] border-t border-border">
+             <div className="h-1/2 border-b border-border">
+               <RunnerPanel code={code} language={project.language as LangKey} onPythonRun={() => setShowTerm(true)} />
+             </div>
+             <div className="h-1/2">
+               <TerminalPanel onClose={() => setShowTerm(false)} />
+             </div>
+           </div>
+         )}
         </div>
-        <div className="flex flex-col">
-          <div className={showTerm ? "h-1/2" : "h-full"}>
-            <RunnerPanel code={code} language={project.language as LangKey} onPythonRun={() => setShowTerm(true)} />
-          </div>
-          {showTerm && (
-            <div className="h-1/2 border-t border-border">
-              <TerminalPanel onClose={() => setShowTerm(false)} />
-            </div>
-          )}
-        </div>
-      </div>
+       </div>
     </div>
   );
 };
