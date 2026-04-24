@@ -2,6 +2,27 @@
 // Registered once globally — guarded by a module-level flag.
 let registered = false;
 
+const PYTHON_API_DOCS = [
+  ["print", "print(value, ..., sep=' ', end='\\n') — вывод в консоль"],
+  ["len", "len(obj) — длина строки, списка, словаря и других коллекций"],
+  ["range", "range(stop) / range(start, stop, step) — диапазон чисел"],
+  ["str", "str(value) — преобразование в строку"],
+  ["int", "int(value) — преобразование в целое число"],
+  ["float", "float(value) — преобразование в число с точкой"],
+  ["list", "list(iterable) — список"],
+  ["dict", "dict() — словарь"],
+  ["set", "set(iterable) — множество"],
+  ["tuple", "tuple(iterable) — кортеж"],
+  ["open", "open(path, mode='r', encoding='utf-8') — открыть файл"],
+  ["input", "input(prompt='') — чтение строки от пользователя"],
+  ["requests", "requests.get/post/... — HTTP запросы"],
+  ["json", "json.loads / json.dumps — работа с JSON"],
+  ["datetime", "datetime.now() / date.today() — дата и время"],
+  ["os", "os.listdir / os.path.join — работа с файловой системой"],
+  ["pathlib", "Path('file').read_text() — современная работа с путями"],
+  ["math", "math.sqrt / math.pi / math.sin — математические функции"],
+] as const;
+
 export const registerSnippets = (monaco: any) => {
   if (registered) return;
   registered = true;
@@ -15,7 +36,19 @@ export const registerSnippets = (monaco: any) => {
   // HTML snippets
   monaco.languages.registerCompletionItemProvider("html", {
     triggerCharacters: ["<", "!", " "],
-    provideCompletionItems: () => ({
+    provideCompletionItems: (model: any, position: any) => {
+      const word = model.getWordUntilPosition(position);
+      const range = {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: word.startColumn,
+        endColumn: word.endColumn,
+      };
+
+      const tags = ["header", "main", "section", "article", "nav", "aside", "footer", "button", "input", "form", "video", "audio", "img", "a", "div", "span", "canvas"];
+      const attrs = ["class", "id", "src", "href", "alt", "title", "rel", "type", "name", "placeholder", "controls", "autoplay", "loop", "muted", "width", "height"];
+
+      return ({
       suggestions: [
         html("!", [
           "<!DOCTYPE html>",
@@ -44,8 +77,24 @@ export const registerSnippets = (monaco: any) => {
         html("p", "<p>$0</p>"),
         html("video", "<video src=\"${1:video.mp4}\" controls></video>"),
         html("audio", "<audio src=\"${1:audio.mp3}\" controls></audio>"),
+        ...tags.map((tag) => ({
+          label: tag,
+          kind: monaco.languages.CompletionItemKind.Keyword,
+          insertText: tag,
+          documentation: `HTML тег <${tag}>`,
+          range,
+        })),
+        ...attrs.map((attr) => ({
+          label: attr,
+          kind: monaco.languages.CompletionItemKind.Property,
+          insertText: `${attr}=\"$1\"`,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          documentation: `HTML атрибут ${attr}`,
+          range,
+        })),
       ],
-    }),
+      });
+    },
   });
 
   // Python snippets
@@ -56,7 +105,16 @@ export const registerSnippets = (monaco: any) => {
   });
   monaco.languages.registerCompletionItemProvider("python", {
     triggerCharacters: [".", " "],
-    provideCompletionItems: () => ({
+    provideCompletionItems: (model: any, position: any) => {
+      const word = model.getWordUntilPosition(position);
+      const range = {
+        startLineNumber: position.lineNumber,
+        endLineNumber: position.lineNumber,
+        startColumn: word.startColumn,
+        endColumn: word.endColumn,
+      };
+
+      return ({
       suggestions: [
         py("print", "print(${1:value})"),
         py("def", "def ${1:name}(${2:args}):\n    ${0:pass}"),
@@ -77,7 +135,22 @@ export const registerSnippets = (monaco: any) => {
         py("requests.get", "import requests\nr = requests.get(\"${1:https://}\")\nprint(r.text)"),
         py("numpy", "import numpy as np\narr = np.array([${1:1, 2, 3}])"),
         py("pandas", "import pandas as pd\ndf = pd.read_csv(\"${1:data.csv}\")"),
+        py("async def", "async def ${1:name}(${2:args}):\n    ${0:pass}"),
+        py("list.sort", "${1:items}.sort(key=${2:None}, reverse=${3:False})"),
+        py("dict.get", "${1:data}.get(${2:'key'}, ${3:None})"),
+        py("pathlib read", "from pathlib import Path\ntext = Path('${1:file.txt}').read_text(encoding='utf-8')"),
+        py("pathlib write", "from pathlib import Path\nPath('${1:file.txt}').write_text(${2:text}, encoding='utf-8')"),
+        py("json load", "import json\nwith open('${1:file.json}', 'r', encoding='utf-8') as f:\n    data = json.load(f)"),
+        py("json dump", "import json\nwith open('${1:file.json}', 'w', encoding='utf-8') as f:\n    json.dump(${2:data}, f, ensure_ascii=False, indent=2)"),
+        ...PYTHON_API_DOCS.map(([label, documentation]) => ({
+          label,
+          kind: monaco.languages.CompletionItemKind.Function,
+          insertText: label,
+          documentation,
+          range,
+        })),
       ],
-    }),
+      });
+    },
   });
 };
