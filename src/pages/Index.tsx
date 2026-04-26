@@ -74,8 +74,18 @@ const Index = () => {
         </div>
       </section>
 
-      <footer className="container relative z-10 py-8 border-t border-border text-center text-sm text-muted-foreground">
-        © Online Coding · Built with Lovable
+      <footer className="container relative z-10 py-10 border-t border-border">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/20 border border-primary/40 flex items-center justify-center">
+              <Code2 className="w-4 h-4 text-primary" />
+            </div>
+            <span className="font-semibold">Online Coding</span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            © {new Date().getFullYear()} Online Coding. Все права защищены.
+          </p>
+        </div>
       </footer>
     </div>
   );

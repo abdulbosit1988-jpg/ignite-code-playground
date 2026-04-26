@@ -61,7 +61,7 @@ export const TerminalPanel = ({ onClose }: { onClose: () => void }) => {
       case "whoami": out.push({ type: "out", text: "developer" }); break;
       case "date": out.push({ type: "out", text: new Date().toString() }); break;
       case "neofetch":
-        out.push({ type: "out", text: "    OS: Online Coding Linux\n  Host: lovable.app\n Shell: ocsh 1.0\n  CPU: WebAssembly\n   RAM: ∞" });
+        out.push({ type: "out", text: "    OS: Online Coding Linux\n  Host: online-coding\n Shell: ocsh 1.0\n  CPU: WebAssembly\n   RAM: ∞" });
         break;
       default:
         out.push({ type: "err", text: `${c}: command not found` });
