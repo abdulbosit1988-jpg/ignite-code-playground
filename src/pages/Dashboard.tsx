@@ -41,18 +41,26 @@ const Dashboard = () => {
     const { data, error } = await supabase.from("projects").insert({ user_id: user.id, name: projectName, language: lang, code: lconf.starter }).select().single();
     if (error) { toast.error(error.message); return; }
 
-    // При создании HTML-проекта автоматически создаём парный CSS-файл
+    // При создании HTML-проекта автоматически создаём парный CSS-файл (если ещё нет)
     if (lang === "html") {
       const cssName = projectName.replace(/\.html?$/i, "") + ".css";
-      const cssStarter = `/* Стили для ${projectName} */\nbody {\n  font-family: system-ui, sans-serif;\n  background: #0f172a;\n  color: #fff;\n  padding: 2rem;\n}\nh1 { color: #22c55e; }\n`;
-      await supabase.from("files").upsert({
-        user_id: user.id,
-        name: cssName,
-        kind: "file",
-        language: "css",
-        mime: "text/css",
-        content: cssStarter,
-      }, { onConflict: "user_id,name" } as any).select();
+      const { data: existing } = await supabase
+        .from("files")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("name", cssName)
+        .maybeSingle();
+      if (!existing) {
+        const cssStarter = `/* Стили для ${projectName} */\nbody {\n  font-family: system-ui, sans-serif;\n  background: #0f172a;\n  color: #fff;\n  padding: 2rem;\n}\nh1 { color: #22c55e; }\n`;
+        await supabase.from("files").insert({
+          user_id: user.id,
+          name: cssName,
+          kind: "file",
+          language: "css",
+          mime: "text/css",
+          content: cssStarter,
+        });
+      }
     }
 
     setOpen(false); setName("");
