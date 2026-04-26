@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LANGUAGES, LangKey } from "@/lib/languages";
-import { Code2, FolderOpen, Plus, LogOut, Shield, Copy, Users, Trash2, Settings as SettingsIcon } from "lucide-react";
+import { LANGUAGES, LangKey, guessLangByName } from "@/lib/languages";
+import { Code2, FolderOpen, Plus, LogOut, Shield, Copy, Users, Trash2, Settings as SettingsIcon, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { isDesktopOS, pickLocalFile } from "@/lib/desktop";
 
 interface Project { id: string; name: string; language: string; updated_at: string; }
 
@@ -36,9 +37,48 @@ const Dashboard = () => {
   const create = async () => {
     if (!name.trim() || !user) return;
     const lconf = LANGUAGES.find((l) => l.key === lang)!;
-    const { data, error } = await supabase.from("projects").insert({ user_id: user.id, name: name.trim(), language: lang, code: lconf.starter }).select().single();
+    const projectName = name.trim();
+    const { data, error } = await supabase.from("projects").insert({ user_id: user.id, name: projectName, language: lang, code: lconf.starter }).select().single();
     if (error) { toast.error(error.message); return; }
+
+    // При создании HTML-проекта автоматически создаём парный CSS-файл (если ещё нет)
+    if (lang === "html") {
+      const cssName = projectName.replace(/\.html?$/i, "") + ".css";
+      const { data: existing } = await supabase
+        .from("files")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("name", cssName)
+        .maybeSingle();
+      if (!existing) {
+        const cssStarter = `/* Стили для ${projectName} */\nbody {\n  font-family: system-ui, sans-serif;\n  background: #0f172a;\n  color: #fff;\n  padding: 2rem;\n}\nh1 { color: #22c55e; }\n`;
+        await supabase.from("files").insert({
+          user_id: user.id,
+          name: cssName,
+          kind: "file",
+          language: "css",
+          mime: "text/css",
+          content: cssStarter,
+        });
+      }
+    }
+
     setOpen(false); setName("");
+    nav(`/editor/${data.id}`);
+  };
+
+  const openLocalFile = async () => {
+    if (!user) return;
+    const picked = await pickLocalFile();
+    if (!picked) return;
+    const language = guessLangByName(picked.name);
+    const { data, error } = await supabase
+      .from("projects")
+      .insert({ user_id: user.id, name: picked.name, language, code: picked.content })
+      .select()
+      .single();
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Открыт файл ${picked.name}`);
     nav(`/editor/${data.id}`);
   };
 
@@ -105,27 +145,41 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <h2 className="text-2xl font-bold">Мои проекты</h2>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Новый</Button></DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader><DialogTitle>Создать новый проект</DialogTitle></DialogHeader>
-              <Label>Название</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="my-app" />
-              <Label className="mt-2">Язык</Label>
-              <div className="grid grid-cols-3 gap-3">
-                {LANGUAGES.map((l) => (
-                  <button key={l.key} onClick={() => setLang(l.key)}
-                    className={`p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-1 ${lang === l.key ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}>
-                    <span className="text-3xl">{l.icon}</span>
-                    <span className="text-sm font-medium">{l.name}</span>
-                  </button>
-                ))}
-              </div>
-              <Button onClick={create} className="mt-2">Создать</Button>
-            </DialogContent>
-          </Dialog>
+          <div className="flex items-center gap-2">
+            {isDesktopOS() && (
+              <Button variant="outline" onClick={openLocalFile} title="Открыть файл с компьютера">
+                <Upload className="w-4 h-4 mr-2" />Открыть с компьютера
+              </Button>
+            )}
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Новый</Button></DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader><DialogTitle>Создать новый проект</DialogTitle></DialogHeader>
+                <Label>Название</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="my-app" />
+                <Label className="mt-2">Язык</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  {LANGUAGES.map((l) => (
+                    <button
+                      key={l.key}
+                      onClick={() => setLang(l.key)}
+                      className={`p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-2 ${lang === l.key ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"}`}
+                    >
+                      {l.image ? (
+                        <img src={l.image} alt={`${l.name} logo`} className="w-10 h-10 object-contain" />
+                      ) : (
+                        <span className="text-3xl">{l.icon}</span>
+                      )}
+                      <span className="text-sm font-medium">{l.name}</span>
+                    </button>
+                  ))}
+                </div>
+                <Button onClick={create} className="mt-2">Создать</Button>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {projects.length === 0 ? (
@@ -140,7 +194,11 @@ const Dashboard = () => {
               return (
                 <div key={p.id} className="glass rounded-xl p-5 group hover:border-primary/50 transition-all cursor-pointer" onClick={() => nav(`/editor/${p.id}`)}>
                   <div className="flex items-start justify-between mb-3">
-                    <span className="text-3xl">{lconf?.icon}</span>
+                    {lconf?.image ? (
+                      <img src={lconf.image} alt={`${lconf.name} logo`} className="w-10 h-10 object-contain" />
+                    ) : (
+                      <span className="text-3xl">{lconf?.icon}</span>
+                    )}
                     <Button variant="ghost" size="icon" className="sm:opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); remove(p.id); }}>
                       <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
