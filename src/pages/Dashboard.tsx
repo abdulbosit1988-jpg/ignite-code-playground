@@ -70,7 +70,11 @@ const Dashboard = () => {
   const openLocalFile = async () => {
     if (!user) return;
     const picked = await pickLocalFile();
-    if (!picked) return;
+    if (!picked) { toast.message("Файл не выбран"); return; }
+    if (picked.isBinary) {
+      toast.error("Можно открыть только текстовый файл с кодом");
+      return;
+    }
     const language = guessLangByName(picked.name);
     const { data, error } = await supabase
       .from("projects")

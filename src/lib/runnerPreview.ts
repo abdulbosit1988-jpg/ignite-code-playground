@@ -17,17 +17,35 @@ const injectCssIntoHtml = (html: string, css?: string) => {
 };
 
 // Защитный <style>/<script> блок, который скрывает исходник от случайного просмотра
-// (отключает выделение текста и контекстное меню «Просмотр кода»).
+// (отключает выделение текста, контекстное меню «Просмотр кода», DevTools-горячие клавиши,
+// drag/drop, печать и копирование).
 const HIDE_SOURCE_GUARD = `
-<style>html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}</style>
+<style>
+  html,body{
+    -webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;
+    -webkit-touch-callout:none;
+  }
+  img,video,canvas,svg{-webkit-user-drag:none;user-drag:none;pointer-events:auto}
+  @media print { body { display:none !important } }
+</style>
 <script>
-  document.addEventListener('contextmenu', e => e.preventDefault());
-  document.addEventListener('keydown', e => {
-    const k = (e.key || '').toLowerCase();
-    if (e.key === 'F12') { e.preventDefault(); }
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (k === 'i' || k === 'j' || k === 'c')) e.preventDefault();
-    if ((e.ctrlKey || e.metaKey) && k === 'u') e.preventDefault();
-  });
+  (function(){
+    var block = function(e){ e.preventDefault(); e.stopPropagation(); return false; };
+    document.addEventListener('contextmenu', block, true);
+    document.addEventListener('dragstart', block, true);
+    document.addEventListener('selectstart', block, true);
+    document.addEventListener('copy', block, true);
+    document.addEventListener('cut', block, true);
+    document.addEventListener('keydown', function(e){
+      var k = (e.key || '').toLowerCase();
+      var ctrl = e.ctrlKey || e.metaKey;
+      if (e.key === 'F12') return block(e);
+      if (ctrl && e.shiftKey && (k==='i'||k==='j'||k==='c'||k==='k')) return block(e);
+      if (ctrl && (k==='u'||k==='s'||k==='p')) return block(e);
+    }, true);
+    // На всякий случай — отчищаем console при загрузке
+    try { console.clear && console.clear(); } catch(_) {}
+  })();
 </script>`;
 
 const wrapWithGuard = (html: string): string => {
