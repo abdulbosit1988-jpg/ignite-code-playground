@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { LANGUAGES, LangKey } from "@/lib/languages";
-import { Code2, FolderOpen, Plus, LogOut, Shield, Copy, Users, Trash2, Settings as SettingsIcon } from "lucide-react";
+import { LANGUAGES, LangKey, guessLangByName } from "@/lib/languages";
+import { Code2, FolderOpen, Plus, LogOut, Shield, Copy, Users, Trash2, Settings as SettingsIcon, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { isDesktopOS, pickLocalFile } from "@/lib/desktop";
 
 interface Project { id: string; name: string; language: string; updated_at: string; }
 
@@ -36,9 +37,40 @@ const Dashboard = () => {
   const create = async () => {
     if (!name.trim() || !user) return;
     const lconf = LANGUAGES.find((l) => l.key === lang)!;
-    const { data, error } = await supabase.from("projects").insert({ user_id: user.id, name: name.trim(), language: lang, code: lconf.starter }).select().single();
+    const projectName = name.trim();
+    const { data, error } = await supabase.from("projects").insert({ user_id: user.id, name: projectName, language: lang, code: lconf.starter }).select().single();
     if (error) { toast.error(error.message); return; }
+
+    // При создании HTML-проекта автоматически создаём парный CSS-файл
+    if (lang === "html") {
+      const cssName = projectName.replace(/\.html?$/i, "") + ".css";
+      const cssStarter = `/* Стили для ${projectName} */\nbody {\n  font-family: system-ui, sans-serif;\n  background: #0f172a;\n  color: #fff;\n  padding: 2rem;\n}\nh1 { color: #22c55e; }\n`;
+      await supabase.from("files").upsert({
+        user_id: user.id,
+        name: cssName,
+        kind: "file",
+        language: "css",
+        mime: "text/css",
+        content: cssStarter,
+      }, { onConflict: "user_id,name" } as any).select();
+    }
+
     setOpen(false); setName("");
+    nav(`/editor/${data.id}`);
+  };
+
+  const openLocalFile = async () => {
+    if (!user) return;
+    const picked = await pickLocalFile();
+    if (!picked) return;
+    const language = guessLangByName(picked.name);
+    const { data, error } = await supabase
+      .from("projects")
+      .insert({ user_id: user.id, name: picked.name, language, code: picked.content })
+      .select()
+      .single();
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Открыт файл ${picked.name}`);
     nav(`/editor/${data.id}`);
   };
 
