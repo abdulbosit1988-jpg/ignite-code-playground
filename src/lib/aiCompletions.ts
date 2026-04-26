@@ -39,7 +39,7 @@ const fetchCompletion = async (language: LangKey, prefix: string, suffix: string
 
 // Дебаунс по позиции — не дёргаем AI на каждый символ.
 let debounceTimer: number | null = null;
-const debouncedSuggestion = (language: LangKey, prefix: string, suffix: string, delay = 350): Promise<string> =>
+const debouncedSuggestion = (language: LangKey, prefix: string, suffix: string, delay = 220): Promise<string> =>
   new Promise((resolve) => {
     if (debounceTimer) window.clearTimeout(debounceTimer);
     debounceTimer = window.setTimeout(async () => {
@@ -65,11 +65,10 @@ export const registerAiCompletions = (monaco: any, getLanguage: () => LangKey) =
       const suffix = fullText.slice(offset);
 
       // Не подсказываем посреди слова (даём приоритет обычным suggest-ам).
-      const charBefore = prefix.slice(-1);
       const charAfter = suffix.slice(0, 1);
-      if (/\w/.test(charBefore) && /\w/.test(charAfter)) return { items: [] };
+      if (/\w/.test(charAfter)) return { items: [] };
       // Слишком короткий контекст — пропускаем.
-      if (prefix.trim().length < 3) return { items: [] };
+      if (prefix.trim().length < 1) return { items: [] };
 
       const text = await debouncedSuggestion(language, prefix, suffix);
       if (!text) return { items: [] };

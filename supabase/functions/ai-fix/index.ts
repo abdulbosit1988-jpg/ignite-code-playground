@@ -42,11 +42,13 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: mode === "complete" ? "google/gemini-2.5-flash-lite" : "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
+        max_tokens: mode === "complete" ? 160 : 2048,
+        temperature: mode === "complete" ? 0.1 : 0.3,
       }),
     });
 
