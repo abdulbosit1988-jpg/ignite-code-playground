@@ -297,8 +297,14 @@ const Editor_ = () => {
               fontSize, fontFamily: "JetBrains Mono, monospace",
               minimap: { enabled: true }, automaticLayout: true,
               tabSize: 2, wordWrap: "on", smoothScrolling: true,
-              suggestOnTriggerCharacters: true, quickSuggestions: true,
+              suggestOnTriggerCharacters: true,
+              quickSuggestions: { other: true, comments: false, strings: true },
               tabCompletion: "on", acceptSuggestionOnEnter: "on",
+              snippetSuggestions: "top", suggestSelection: "first",
+              wordBasedSuggestions: "currentDocument" as any,
+              parameterHints: { enabled: true },
+              autoClosingBrackets: "always", autoClosingQuotes: "always",
+              autoIndent: "full", formatOnPaste: true, formatOnType: true,
               cursorBlinking: "smooth", padding: { top: 12 },
             }}
           />
