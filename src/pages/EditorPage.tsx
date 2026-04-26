@@ -309,6 +309,7 @@ const Editor_ = () => {
               autoClosingBrackets: "always", autoClosingQuotes: "always",
               autoIndent: "full", formatOnPaste: true, formatOnType: true,
               cursorBlinking: "smooth", padding: { top: 12 },
+              inlineSuggest: { enabled: true, mode: "subword" as any },
             }}
           />
          </div>
