@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { registerSnippets } from "@/lib/editorSnippets";
+import { registerAiCompletions } from "@/lib/aiCompletions";
 import { buildPreviewHtml, openPreviewInNewTab } from "@/lib/runnerPreview";
 
 const Editor_ = () => {
@@ -166,6 +167,8 @@ const Editor_ = () => {
 
     // Register code snippets / completions for HTML and Python
     registerSnippets(monaco);
+    // Register AI inline completions (Copilot-like)
+    registerAiCompletions(monaco, () => (project?.language as LangKey) || "python");
 
     // Ctrl/Cmd + scroll = font size
     const dom = editor.getDomNode();
