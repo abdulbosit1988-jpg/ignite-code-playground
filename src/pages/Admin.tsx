@@ -11,6 +11,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const SUPER_ADMIN_EMAIL = "abdulbosit1988@gmail.com";
 
@@ -31,6 +33,7 @@ const Admin = () => {
   const nav = useNavigate();
   const [rows, setRows] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [projectPicker, setProjectPicker] = useState<{ open: boolean, user: UserRow | null, projects: any[] }>({ open: false, user: null, projects: [] });
 
   const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
 
@@ -83,10 +86,14 @@ const Admin = () => {
     toast.success("Excel-файл скачан");
   };
 
-  const viewProjects = async (userId: string) => {
-    const { data } = await supabase.from("projects").select("id").eq("user_id", userId).order("updated_at", { ascending: false }).limit(1).maybeSingle();
-    if (!data) { toast.error("У пользователя нет проектов"); return; }
-    nav(`/editor/${data.id}`);
+  const viewProjects = async (row: UserRow) => {
+    const { data } = await supabase.from("projects").select("id, name, language, updated_at").eq("user_id", row.user_id).order("updated_at", { ascending: false });
+    if (!data || data.length === 0) { toast.error("У пользователя нет проектов"); return; }
+    if (data.length === 1) {
+      nav(`/editor/${data[0].id}`);
+    } else {
+      setProjectPicker({ open: true, user: row, projects: data });
+    }
   };
 
   const deleteUser = async (userId: string, email: string) => {
@@ -164,7 +171,7 @@ const Admin = () => {
                   className={`w-8 h-8 rounded text-sm font-bold ${r.grade === null ? GRADE_COLORS["absent"] + " ring-2 ring-primary" : "bg-secondary"}`}>Н</button>
               </div>
               <div className="flex gap-2 flex-wrap">
-                <Button variant="outline" size="sm" onClick={() => viewProjects(r.user_id)}><Eye className="w-3 h-3 mr-1" />Проект</Button>
+                <Button variant="outline" size="sm" onClick={() => viewProjects(r)}><Eye className="w-3 h-3 mr-1" />Проект</Button>
                 {r.email !== SUPER_ADMIN_EMAIL && (
                   <Button variant={r.is_admin ? "secondary" : "outline"} size="sm" onClick={() => toggleAdmin(r)}>
                     {r.is_admin ? <><ShieldOff className="w-3 h-3 mr-1" />Снять</> : <><Shield className="w-3 h-3 mr-1" />Админ</>}
@@ -248,7 +255,7 @@ const Admin = () => {
                   </td>
                   <td className="p-3">
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => viewProjects(r.user_id)}><Eye className="w-3 h-3 mr-1" />Проект</Button>
+                      <Button variant="outline" size="sm" onClick={() => viewProjects(r)}><Eye className="w-3 h-3 mr-1" />Проект</Button>
                       {canDelete(r) && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -285,6 +292,28 @@ const Admin = () => {
           <span className="flex items-center gap-1"><Shield className="w-3 h-3 text-primary" />— админ</span>
         </div>
       </div>
+
+      <Dialog open={projectPicker.open} onOpenChange={(v) => setProjectPicker(p => ({ ...p, open: v }))}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Выберите проект {projectPicker.user?.display_name}</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] pr-4">
+            <div className="space-y-2">
+              {projectPicker.projects.map((p) => (
+                <button key={p.id} onClick={() => nav(`/editor/${p.id}`)}
+                  className="w-full text-left p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-secondary/50 transition-all flex items-center justify-between group">
+                  <div>
+                    <p className="font-medium">{p.name}</p>
+                    <p className="text-xs text-muted-foreground">{p.language} · {new Date(p.updated_at).toLocaleDateString()}</p>
+                  </div>
+                  <Eye className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
