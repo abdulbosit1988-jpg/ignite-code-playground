@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { LANGUAGES, LangKey, guessLangByName } from "@/lib/languages";
 import { Code2, FolderOpen, Plus, LogOut, Shield, Copy, Users, Trash2, Settings as SettingsIcon, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { isDesktopOS, pickLocalFile } from "@/lib/desktop";
+import { pickLocalFile } from "@/lib/desktop";
 
 interface Project { id: string; name: string; language: string; updated_at: string; }
 
@@ -23,6 +23,7 @@ const Dashboard = () => {
   const [name, setName] = useState("");
   const [lang, setLang] = useState<LangKey>("python");
   const [joinCode, setJoinCode] = useState("");
+  const [myGrade, setMyGrade] = useState<number | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -31,13 +32,36 @@ const Dashboard = () => {
       setProjects(p || []);
       const { data: prof } = await supabase.from("profiles").select("invite_code").eq("user_id", user.id).maybeSingle();
       if (prof) setInviteCode(prof.invite_code);
+      const { data: g } = await supabase.from("grades").select("grade").eq("user_id", user.id).maybeSingle();
+      if (g) setMyGrade(g.grade);
     })();
   }, [user]);
 
   const create = async () => {
     if (!name.trim() || !user) return;
-    const lconf = LANGUAGES.find((l) => l.key === lang)!;
+    
     const projectName = name.trim();
+
+    // Check if name is English only (letters, numbers, hyphens, underscores)
+    if (!/^[a-zA-Z0-9_-]+$/.test(projectName)) {
+      toast.error("Название проекта должно быть на английском (латиница, цифры, дефис)");
+      return;
+    }
+
+    // Check uniqueness for this user
+    const { data: existingProj } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("name", projectName)
+      .maybeSingle();
+
+    if (existingProj) {
+      toast.error("Проект с таким названием уже существует");
+      return;
+    }
+
+    const lconf = LANGUAGES.find((l) => l.key === lang)!;
     const { data, error } = await supabase.from("projects").insert({ user_id: user.id, name: projectName, language: lang, code: lconf.starter }).select().single();
     if (error) { toast.error(error.message); return; }
 
@@ -59,6 +83,19 @@ const Dashboard = () => {
           language: "css",
           mime: "text/css",
           content: cssStarter,
+        });
+      }
+      
+      const jsName = projectName.replace(/\.html?$/i, "") + ".js";
+      const { data: exJs } = await supabase.from("files").select("id").eq("user_id", user.id).eq("name", jsName).maybeSingle();
+      if (!exJs) {
+        await supabase.from("files").insert({
+          user_id: user.id,
+          name: jsName,
+          kind: "file",
+          language: "javascript",
+          mime: "application/javascript",
+          content: `// Скрипты для ${projectName}\nconsole.log('Hello from JS!');\n`,
         });
       }
     }
@@ -131,6 +168,9 @@ const Dashboard = () => {
           <div>
             <p className="text-sm text-muted-foreground mb-1">Привет, {user?.email}</p>
             <p className="text-sm">Твой код-приглашение для совместной работы:</p>
+            {myGrade !== null && (
+              <p className="mt-2 text-sm font-semibold">Твоя оценка: <span className="text-primary text-xl px-2 py-1 rounded bg-primary/10">{myGrade}</span></p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <code className="px-4 py-2 rounded bg-secondary font-mono text-primary text-lg">{inviteCode || "..."}</code>
@@ -152,11 +192,9 @@ const Dashboard = () => {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h2 className="text-2xl font-bold">Мои проекты</h2>
           <div className="flex items-center gap-2">
-            {isDesktopOS() && (
-              <Button variant="outline" onClick={openLocalFile} title="Открыть файл с компьютера">
-                <Upload className="w-4 h-4 mr-2" />Открыть с компьютера
-              </Button>
-            )}
+            <Button variant="outline" onClick={openLocalFile} title="Открыть файл с компьютера">
+              <Upload className="w-4 h-4 mr-2" />Открыть с компьютера
+            </Button>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-2" />Новый</Button></DialogTrigger>
               <DialogContent className="max-w-lg">
