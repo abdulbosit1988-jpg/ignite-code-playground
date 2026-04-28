@@ -10,7 +10,8 @@ import { RunnerPanel } from "@/components/RunnerPanel";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ArrowLeft, Save, Terminal as TermIcon, Pipette, Wand2,
-  ZoomIn, ZoomOut, Users, Loader2, Sparkles, Play,
+  ZoomIn, ZoomOut, Users, Loader2, Sparkles, Play, Link as LinkIcon,
+  Code2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,12 +34,15 @@ const Editor_ = () => {
   const [collaborators, setCollaborators] = useState(0);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiInstruction, setAiInstruction] = useState("");
-  const [linkedCss, setLinkedCss] = useState("");
-  const [runSignal, setRunSignal] = useState(0);
-  const remoteUpdate = useRef(false);
-  const channelRef = useRef<any>(null);
   const isShared = !!invite;
   const saveTimerRef = useRef<number | null>(null);
+  const lastSentCodeRef = useRef<string | null>(null);
+
+  // HTML Project multi-file state
+  const [activeTab, setActiveTab] = useState<"html" | "css" | "js">("html");
+  const [linkedCss, setLinkedCss] = useState("");
+  const [linkedJs, setLinkedJs] = useState("");
+  const initialLoadDone = useRef(false);
 
   // Load project
   useEffect(() => {
@@ -64,16 +68,48 @@ const Editor_ = () => {
         const newCode = (payload.new as any).code;
         const ed = editorRef.current;
         if (newCode !== undefined && ed && newCode !== ed.getValue()) {
-          // Preserve cursor/selection when applying remote update
-          const sel = ed.getSelection();
-          remoteUpdate.current = true;
-          ed.executeEdits("remote", [{
-            range: ed.getModel().getFullModelRange(),
-            text: newCode,
-            forceMoveMarkers: true,
-          }]);
-          if (sel) ed.setSelection(sel);
-          setCode(newCode);
+          // Ignore echo of our own save
+          if (newCode === lastSentCodeRef.current) return;
+
+          // Smart diff-apply: only change lines that differ so cursor stays in place
+          const model = ed.getModel();
+          const oldLines = model.getLinesContent() as string[];
+          const newLines = newCode.split("\n");
+          const edits: any[] = [];
+
+          const maxLen = Math.max(oldLines.length, newLines.length);
+          for (let i = 0; i < maxLen; i++) {
+            const oldLine = oldLines[i];
+            const newLine = newLines[i];
+            if (oldLine === undefined) {
+              edits.push({
+                range: { startLineNumber: oldLines.length, endLineNumber: oldLines.length, startColumn: (oldLines[oldLines.length - 1] || "").length + 1, endColumn: (oldLines[oldLines.length - 1] || "").length + 1 },
+                text: "\n" + newLines.slice(oldLines.length).join("\n"),
+              });
+              break;
+            } else if (newLine === undefined) {
+              edits.push({
+                range: { startLineNumber: i + 1, endLineNumber: oldLines.length, startColumn: 1, endColumn: (oldLines[oldLines.length - 1] || "").length + 1 },
+                text: "",
+              });
+              break;
+            } else if (oldLine !== newLine) {
+              edits.push({
+                range: { startLineNumber: i + 1, endLineNumber: i + 1, startColumn: 1, endColumn: oldLine.length + 1 },
+                text: newLine,
+              });
+            }
+          }
+
+          if (edits.length > 0) {
+            const savedPos = ed.getPosition();
+            const savedSel = ed.getSelection();
+            remoteUpdate.current = true;
+            ed.executeEdits("remote", edits);
+            if (savedPos) ed.setPosition(savedPos);
+            if (savedSel) ed.setSelection(savedSel);
+          }
+          if (activeTab === "html") setCode(newCode);
         }
       });
       ch.on("presence", { event: "sync" }, () => {
@@ -91,36 +127,62 @@ const Editor_ = () => {
   const saveCode = useCallback(async (val: string, themeOverride?: string) => {
     if (!project) return;
     setSaving(true);
-    await supabase.from("projects").update({ code: val, theme: themeOverride || theme }).eq("id", project.id);
+    if (activeTab === "html") {
+      lastSentCodeRef.current = val;
+      await supabase.from("projects").update({ code: val, theme: themeOverride || theme }).eq("id", project.id);
+    } else {
+      const ext = activeTab === "css" ? ".css" : ".js";
+      const fileName = project.name.replace(/\.(html?|css|js|py)$/i, "") + ext;
+      await supabase.from("files").upsert({
+        user_id: project.user_id,
+        name: fileName,
+        content: val,
+        kind: "file",
+        language: activeTab,
+        mime: activeTab === "css" ? "text/css" : "application/javascript"
+      }, { onConflict: "user_id,name" });
+      if (activeTab === "css") setLinkedCss(val);
+      else setLinkedJs(val);
+    }
     setSaving(false);
-  }, [project, theme]);
+  }, [project, theme, activeTab]);
 
-  // Debounced auto-save — does NOT re-render the editor (saves the latest value via ref)
-  const codeRef = useRef(code);
-  useEffect(() => { codeRef.current = code; }, [code]);
   useEffect(() => {
     if (!project) return;
-    if (remoteUpdate.current) { remoteUpdate.current = false; return; }
     if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = window.setTimeout(() => saveCode(codeRef.current), 1800);
+    saveTimerRef.current = window.setTimeout(() => {
+      const val = editorRef.current?.getValue();
+      if (val !== undefined) saveCode(val);
+    }, 1800);
     return () => {
       if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     };
-  }, [code, project, saveCode]);
+  }, [code, linkedCss, linkedJs, project, saveCode]);
 
   useEffect(() => {
-    if (!project || project.language !== "html" || isShared) { setLinkedCss(""); return; }
+    if (!project || project.language !== "html" || isShared) return;
     (async () => {
-      const cssName = project.name.replace(/\.html?$/i, ".css");
-      const { data } = await supabase
-        .from("files")
-        .select("content")
-        .eq("user_id", project.user_id)
-        .eq("name", cssName)
-        .maybeSingle();
-      setLinkedCss((data as any)?.content || "");
+      const baseName = project.name.replace(/\.html?$/i, "");
+      const cssName = baseName + ".css";
+      const jsName = baseName + ".js";
+
+      const { data: files } = await supabase.from("files").select("name, content").eq("user_id", project.user_id).in("name", [cssName, jsName]);
+      const css = files?.find(f => f.name === cssName)?.content || "";
+      const js = files?.find(f => f.name === jsName)?.content || "";
+      setLinkedCss(css);
+      setLinkedJs(js);
+      initialLoadDone.current = true;
     })();
   }, [project, isShared]);
+
+  const switchTab = (tab: "html" | "css" | "js") => {
+    if (tab === activeTab) return;
+    // Save current before switching
+    saveCode(editorRef.current?.getValue() || "");
+    setActiveTab(tab);
+    const newVal = tab === "html" ? code : tab === "css" ? linkedCss : linkedJs;
+    editorRef.current?.setValue(newVal);
+  };
 
   const handleRun = useCallback(() => {
     if (!project) return;
@@ -130,14 +192,22 @@ const Editor_ = () => {
       return;
     }
 
-    const html = buildPreviewHtml(codeRef.current, project.language as LangKey, linkedCss);
-    openPreviewInNewTab(html);
-  }, [project, linkedCss]);
+    const currentCode = activeTab === "html" ? editorRef.current?.getValue() : code;
+    const currentCss = activeTab === "css" ? editorRef.current?.getValue() : linkedCss;
+    const currentJs = activeTab === "js" ? editorRef.current?.getValue() : linkedJs;
+
+    const html = buildPreviewHtml(currentCode, project.language as LangKey, currentCss);
+    // Inject JS into preview if exists
+    const finalHtml = currentJs ? html.replace("</body>", `<script>${currentJs}</script></body>`) : html;
+    openPreviewInNewTab(finalHtml);
+  }, [project, code, linkedCss, linkedJs, activeTab]);
 
   const editorLanguage = useMemo(() => {
+    if (activeTab === "css") return "css";
+    if (activeTab === "js") return "javascript";
     if (project?.language === "javascript") return "javascript";
     return project?.language;
-  }, [project?.language]);
+  }, [project?.language, activeTab]);
 
   const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
@@ -222,7 +292,11 @@ const Editor_ = () => {
     <div className="h-screen flex flex-col bg-background">
       <header className="border-b border-border flex items-center px-2 sm:px-3 h-12 gap-1 sm:gap-2 shrink-0 overflow-x-auto" style={{ background: `hsl(var(--navbar) / 0.95)` }}>
         <Button variant="ghost" size="icon" onClick={() => nav("/dashboard")}><ArrowLeft className="w-4 h-4" /></Button>
-        <span className="text-2xl shrink-0">{lconf?.icon}</span>
+        <div className="flex items-center gap-2 shrink-0 pr-2 border-r border-border mr-1">
+          <Code2 className="w-5 h-5 text-primary" />
+          <span className="font-bold text-sm hidden sm:inline">Online Coding</span>
+        </div>
+        <span className="text-xl shrink-0">{lconf?.icon}</span>
         <div className="flex-1 min-w-0 hidden sm:block">
           <p className="font-medium truncate text-sm">{project.name}{isShared && " (shared)"}</p>
           <p className="text-xs text-muted-foreground">{lconf?.name} · {saving ? "сохранение..." : "сохранено"}</p>
@@ -284,9 +358,26 @@ const Editor_ = () => {
           <div className="hidden sm:flex items-center gap-1 px-2 text-xs text-muted-foreground">
             <Users className="w-3 h-3" /> {collaborators}
           </div>
-          <Button size="sm" variant="outline" onClick={() => saveCode(code)}><Save className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Save</span></Button>
+          {project.language === "html" && (
+            <Button variant="outline" size="sm" onClick={() => {
+              const url = `${window.location.origin}/site/${project.name}`;
+              navigator.clipboard.writeText(url);
+              toast.success("Ссылка на сайт скопирована!");
+            }}>
+              <LinkIcon className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Ссылка</span>
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={() => saveCode(editorRef.current?.getValue() || "")}><Save className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Save</span></Button>
         </div>
       </header>
+
+      {project.language === "html" && (
+        <div className="flex bg-secondary/30 border-b border-border h-9 px-4 items-center gap-4">
+          <button onClick={() => switchTab("html")} className={`text-xs font-mono px-3 h-full transition-colors ${activeTab === "html" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>index.html</button>
+          <button onClick={() => switchTab("css")} className={`text-xs font-mono px-3 h-full transition-colors ${activeTab === "css" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>style.css</button>
+          <button onClick={() => switchTab("js")} className={`text-xs font-mono px-3 h-full transition-colors ${activeTab === "js" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}>script.js</button>
+        </div>
+      )}
 
        <div className="flex-1 flex flex-col overflow-hidden">
          <div className="flex-1 min-h-[40vh]">
@@ -294,7 +385,12 @@ const Editor_ = () => {
             height="100%"
             language={editorLanguage}
             defaultValue={code}
-            onChange={(v) => setCode(v ?? "")}
+            onChange={(v) => {
+              const val = v ?? "";
+              if (activeTab === "html") setCode(val);
+              else if (activeTab === "css") setLinkedCss(val);
+              else setLinkedJs(val);
+            }}
             onMount={handleMount}
             options={{
               fontSize, fontFamily: "JetBrains Mono, monospace",
