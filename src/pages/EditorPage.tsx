@@ -182,11 +182,19 @@ const Editor_ = () => {
 
   const switchTab = (tab: "html" | "css" | "js") => {
     if (tab === activeTab) return;
-    // Save current before switching
-    saveCode(editorRef.current?.getValue() || "");
+    // Save current before switching (use current tab via ref to avoid stale closure)
+    const cur = editorRef.current?.getValue() ?? "";
+    if (activeTabRef.current === "html") setCode(cur);
+    else if (activeTabRef.current === "css") setLinkedCss(cur);
+    else setLinkedJs(cur);
+    saveCode(cur);
+
+    activeTabRef.current = tab;
     setActiveTab(tab);
     const newVal = tab === "html" ? code : tab === "css" ? linkedCss : linkedJs;
+    switchingTabRef.current = true;
     editorRef.current?.setValue(newVal);
+    setTimeout(() => { switchingTabRef.current = false; }, 0);
   };
 
   const handleRun = useCallback(() => {
