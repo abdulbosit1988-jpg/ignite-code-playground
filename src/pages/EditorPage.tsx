@@ -138,14 +138,19 @@ const Editor_ = () => {
     } else {
       const ext = activeTab === "css" ? ".css" : ".js";
       const fileName = project.name.replace(/\.(html?|css|js|py)$/i, "") + ext;
-      await supabase.from("files").upsert({
-        user_id: project.user_id,
-        name: fileName,
-        content: val,
-        kind: "file",
-        language: activeTab,
-        mime: activeTab === "css" ? "text/css" : "application/javascript"
-      }, { onConflict: "user_id,name" });
+      const { data: existing } = await supabase.from("files").select("id").eq("user_id", project.user_id).eq("name", fileName).maybeSingle();
+      if (existing) {
+        await supabase.from("files").update({ content: val, language: activeTab, mime: activeTab === "css" ? "text/css" : "application/javascript" }).eq("id", existing.id);
+      } else {
+        await supabase.from("files").insert({
+          user_id: project.user_id,
+          name: fileName,
+          content: val,
+          kind: "file",
+          language: activeTab,
+          mime: activeTab === "css" ? "text/css" : "application/javascript",
+        });
+      }
       if (activeTab === "css") setLinkedCss(val);
       else setLinkedJs(val);
     }
