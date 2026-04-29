@@ -37,9 +37,13 @@ const Editor_ = () => {
   const isShared = !!invite;
   const saveTimerRef = useRef<number | null>(null);
   const lastSentCodeRef = useRef<string | null>(null);
+  const channelRef = useRef<any>(null);
+  const remoteUpdate = useRef(false);
+  const switchingTabRef = useRef(false);
 
   // HTML Project multi-file state
   const [activeTab, setActiveTab] = useState<"html" | "css" | "js">("html");
+  const activeTabRef = useRef<"html" | "css" | "js">("html");
   const [linkedCss, setLinkedCss] = useState("");
   const [linkedJs, setLinkedJs] = useState("");
   const initialLoadDone = useRef(false);
