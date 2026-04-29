@@ -48,6 +48,7 @@ const Editor_ = () => {
   const [linkedCss, setLinkedCss] = useState("");
   const [linkedJs, setLinkedJs] = useState("");
   const initialLoadDone = useRef(false);
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
   // Load project
   useEffect(() => {
