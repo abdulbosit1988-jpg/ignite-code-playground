@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { LANGUAGES, LangKey, guessLangByName } from "@/lib/languages";
-import { Code2, FolderOpen, Plus, LogOut, Shield, Copy, Users, Trash2, Settings as SettingsIcon, Upload } from "lucide-react";
+import { Code2, FolderOpen, Plus, LogOut, Shield, Copy, Users, Trash2, Settings as SettingsIcon, Upload, Link2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { pickLocalFile } from "@/lib/desktop";
 
@@ -233,6 +233,8 @@ const Dashboard = () => {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.map((p) => {
               const lconf = LANGUAGES.find((l) => l.key === p.language);
+              const isHtml = p.language === "html";
+              const siteUrl = `${window.location.origin}/site/${encodeURIComponent(p.name)}`;
               return (
                 <div key={p.id} className="glass rounded-xl p-5 group hover:border-primary/50 transition-all cursor-pointer" onClick={() => nav(`/editor/${p.id}`)}>
                   <div className="flex items-start justify-between mb-3">
@@ -241,9 +243,21 @@ const Dashboard = () => {
                     ) : (
                       <span className="text-3xl">{lconf?.icon}</span>
                     )}
-                    <Button variant="ghost" size="icon" className="sm:opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); remove(p.id); }}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
+                    <div className="flex gap-1 sm:opacity-0 group-hover:opacity-100">
+                      {isHtml && (
+                        <>
+                          <Button variant="ghost" size="icon" title="Открыть сайт" onClick={(e) => { e.stopPropagation(); window.open(siteUrl, "_blank"); }}>
+                            <ExternalLink className="w-4 h-4 text-primary" />
+                          </Button>
+                          <Button variant="ghost" size="icon" title="Копировать ссылку на сайт" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(siteUrl); toast.success("Ссылка скопирована!"); }}>
+                            <Link2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); remove(p.id); }}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                   <h3 className="font-semibold truncate">{p.name}</h3>
                   <p className="text-xs text-muted-foreground">{lconf?.name} · {new Date(p.updated_at).toLocaleDateString()}</p>
