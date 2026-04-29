@@ -399,9 +399,11 @@ const Editor_ = () => {
             language={editorLanguage}
             defaultValue={code}
             onChange={(v) => {
+              if (switchingTabRef.current || remoteUpdate.current) { remoteUpdate.current = false; return; }
               const val = v ?? "";
-              if (activeTab === "html") setCode(val);
-              else if (activeTab === "css") setLinkedCss(val);
+              const t = activeTabRef.current;
+              if (t === "html") setCode(val);
+              else if (t === "css") setLinkedCss(val);
               else setLinkedJs(val);
             }}
             onMount={handleMount}
