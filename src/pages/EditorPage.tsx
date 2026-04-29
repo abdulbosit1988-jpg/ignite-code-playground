@@ -34,15 +34,21 @@ const Editor_ = () => {
   const [collaborators, setCollaborators] = useState(0);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiInstruction, setAiInstruction] = useState("");
+  const [runSignal, setRunSignal] = useState(0);
   const isShared = !!invite;
   const saveTimerRef = useRef<number | null>(null);
   const lastSentCodeRef = useRef<string | null>(null);
+  const channelRef = useRef<any>(null);
+  const remoteUpdate = useRef(false);
+  const switchingTabRef = useRef(false);
 
   // HTML Project multi-file state
   const [activeTab, setActiveTab] = useState<"html" | "css" | "js">("html");
+  const activeTabRef = useRef<"html" | "css" | "js">("html");
   const [linkedCss, setLinkedCss] = useState("");
   const [linkedJs, setLinkedJs] = useState("");
   const initialLoadDone = useRef(false);
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
   // Load project
   useEffect(() => {
@@ -133,14 +139,19 @@ const Editor_ = () => {
     } else {
       const ext = activeTab === "css" ? ".css" : ".js";
       const fileName = project.name.replace(/\.(html?|css|js|py)$/i, "") + ext;
-      await supabase.from("files").upsert({
-        user_id: project.user_id,
-        name: fileName,
-        content: val,
-        kind: "file",
-        language: activeTab,
-        mime: activeTab === "css" ? "text/css" : "application/javascript"
-      }, { onConflict: "user_id,name" });
+      const { data: existing } = await supabase.from("files").select("id").eq("user_id", project.user_id).eq("name", fileName).maybeSingle();
+      if (existing) {
+        await supabase.from("files").update({ content: val, language: activeTab, mime: activeTab === "css" ? "text/css" : "application/javascript" }).eq("id", existing.id);
+      } else {
+        await supabase.from("files").insert({
+          user_id: project.user_id,
+          name: fileName,
+          content: val,
+          kind: "file",
+          language: activeTab,
+          mime: activeTab === "css" ? "text/css" : "application/javascript",
+        });
+      }
       if (activeTab === "css") setLinkedCss(val);
       else setLinkedJs(val);
     }
@@ -177,11 +188,19 @@ const Editor_ = () => {
 
   const switchTab = (tab: "html" | "css" | "js") => {
     if (tab === activeTab) return;
-    // Save current before switching
-    saveCode(editorRef.current?.getValue() || "");
+    // Save current before switching (use current tab via ref to avoid stale closure)
+    const cur = editorRef.current?.getValue() ?? "";
+    if (activeTabRef.current === "html") setCode(cur);
+    else if (activeTabRef.current === "css") setLinkedCss(cur);
+    else setLinkedJs(cur);
+    saveCode(cur);
+
+    activeTabRef.current = tab;
     setActiveTab(tab);
     const newVal = tab === "html" ? code : tab === "css" ? linkedCss : linkedJs;
+    switchingTabRef.current = true;
     editorRef.current?.setValue(newVal);
+    setTimeout(() => { switchingTabRef.current = false; }, 0);
   };
 
   const handleRun = useCallback(() => {
@@ -386,9 +405,11 @@ const Editor_ = () => {
             language={editorLanguage}
             defaultValue={code}
             onChange={(v) => {
+              if (switchingTabRef.current || remoteUpdate.current) { remoteUpdate.current = false; return; }
               const val = v ?? "";
-              if (activeTab === "html") setCode(val);
-              else if (activeTab === "css") setLinkedCss(val);
+              const t = activeTabRef.current;
+              if (t === "html") setCode(val);
+              else if (t === "css") setLinkedCss(val);
               else setLinkedJs(val);
             }}
             onMount={handleMount}
