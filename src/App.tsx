@@ -13,6 +13,7 @@ import EditorPage from "./pages/EditorPage.tsx";
 import Admin from "./pages/Admin.tsx";
 import Settings from "./pages/Settings.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import SitePreview from "./pages/SitePreview.tsx";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
               <Route path="/editor/:id" element={<ProtectedRoute><EditorPage /></ProtectedRoute>} />
               <Route path="/editor/shared/:code" element={<ProtectedRoute><EditorPage /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
+              <Route path="/site/:projectName" element={<SitePreview />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </SettingsProvider>
