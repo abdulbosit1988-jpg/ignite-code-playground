@@ -34,6 +34,7 @@ const Editor_ = () => {
   const [collaborators, setCollaborators] = useState(0);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiInstruction, setAiInstruction] = useState("");
+  const [runSignal, setRunSignal] = useState(0);
   const isShared = !!invite;
   const saveTimerRef = useRef<number | null>(null);
   const lastSentCodeRef = useRef<string | null>(null);
