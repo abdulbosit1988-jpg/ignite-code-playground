@@ -393,9 +393,15 @@ const Editor_ = () => {
           </Popover>
 
           <Dialog open={!!aiAnswer} onOpenChange={(o) => !o && setAiAnswer("")}>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
               <DialogHeader><DialogTitle className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Ответ ИИ</DialogTitle></DialogHeader>
-              <div className="text-sm whitespace-pre-wrap leading-relaxed">{aiAnswer}</div>
+              <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none prose-pre:bg-secondary prose-pre:text-foreground prose-code:text-primary prose-code:before:content-none prose-code:after:content-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiAnswer}</ReactMarkdown>
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(aiAnswer); toast.success("Скопировано"); }}>Копировать</Button>
+                <Button size="sm" onClick={() => setAiAnswer("")}>Закрыть</Button>
+              </div>
             </DialogContent>
           </Dialog>
 
