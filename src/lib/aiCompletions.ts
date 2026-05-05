@@ -58,7 +58,7 @@ export const registerAiCompletions = (monaco: any, getLanguage: () => LangKey) =
     provideInlineCompletions: async (model: any, position: any) => {
       const language = getLanguage();
       // AI-подсказки имеют смысл только для языков программирования.
-      if (!["python", "javascript", "html", "css", "go", "java"].includes(language)) {
+      if (!SUPPORTED_LANGS.includes(language)) {
         return { items: [] };
       }
       const fullText: string = model.getValue();
