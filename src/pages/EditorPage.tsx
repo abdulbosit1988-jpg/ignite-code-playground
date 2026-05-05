@@ -355,7 +355,7 @@ const Editor_ = () => {
                 {aiBusy ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Sparkles className="w-4 h-4 text-primary" />}
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-72 space-y-2">
+            <PopoverContent align="end" className="w-80 space-y-2 max-h-[80vh] overflow-y-auto">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">ИИ-помощник ({lconf?.name})</p>
               <Button size="sm" variant="secondary" className="w-full justify-start" disabled={aiBusy} onClick={() => callAi("fix")}>
                 <Sparkles className="w-3 h-3 mr-2" />Исправить ошибки
@@ -370,8 +370,22 @@ const Editor_ = () => {
                   Сгенерировать
                 </Button>
               </div>
+              <div className="space-y-1 pt-1 border-t border-border">
+                <p className="text-xs text-muted-foreground">Спросить ИИ о чём угодно:</p>
+                <Textarea value={aiAsk} onChange={(e) => setAiAsk(e.target.value)} placeholder="Как работает useEffect? / Что такое async?..." className="text-xs min-h-[60px]" />
+                <Button size="sm" variant="default" className="w-full" disabled={aiBusy || !aiAsk.trim()} onClick={() => { callAi("ask", aiAsk); setAiAsk(""); }}>
+                  Спросить
+                </Button>
+              </div>
             </PopoverContent>
           </Popover>
+
+          <Dialog open={!!aiAnswer} onOpenChange={(o) => !o && setAiAnswer("")}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader><DialogTitle className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Ответ ИИ</DialogTitle></DialogHeader>
+              <div className="text-sm whitespace-pre-wrap leading-relaxed">{aiAnswer}</div>
+            </DialogContent>
+          </Dialog>
 
           <div className="hidden md:flex items-center">
             <Button variant="ghost" size="icon" onClick={() => setFontSize((f) => Math.max(8, f - 1))} title="Уменьшить"><ZoomOut className="w-4 h-4" /></Button>
