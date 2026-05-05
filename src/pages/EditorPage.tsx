@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { registerSnippets } from "@/lib/editorSnippets";
 import { registerAiCompletions } from "@/lib/aiCompletions";
 import { buildPreviewHtml, openPreviewInNewTab } from "@/lib/runnerPreview";
