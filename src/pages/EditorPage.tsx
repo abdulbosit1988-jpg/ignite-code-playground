@@ -77,50 +77,53 @@ const Editor_ = () => {
       const ch = supabase.channel(`project:${projectId}`, { config: { presence: { key: user?.id || "anon" } } });
       ch.on("postgres_changes", { event: "UPDATE", schema: "public", table: "projects", filter: `id=eq.${projectId}` }, (payload) => {
         const newCode = (payload.new as any).code;
+        if (newCode === undefined) return;
+        // Ignore echo of our own save
+        if (newCode === lastSentCodeRef.current) return;
+        // Always keep latest html in state
+        setCode(newCode);
+        // Only patch the editor if user is currently viewing the HTML tab
         const ed = editorRef.current;
-        if (newCode !== undefined && ed && newCode !== ed.getValue()) {
-          // Ignore echo of our own save
-          if (newCode === lastSentCodeRef.current) return;
+        if (!ed || activeTabRef.current !== "html") return;
+        if (newCode === ed.getValue()) return;
 
-          // Smart diff-apply: only change lines that differ so cursor stays in place
-          const model = ed.getModel();
-          const oldLines = model.getLinesContent() as string[];
-          const newLines = newCode.split("\n");
-          const edits: any[] = [];
+        // Smart diff-apply: only change lines that differ so cursor stays in place
+        const model = ed.getModel();
+        const oldLines = model.getLinesContent() as string[];
+        const newLines = newCode.split("\n");
+        const edits: any[] = [];
 
-          const maxLen = Math.max(oldLines.length, newLines.length);
-          for (let i = 0; i < maxLen; i++) {
-            const oldLine = oldLines[i];
-            const newLine = newLines[i];
-            if (oldLine === undefined) {
-              edits.push({
-                range: { startLineNumber: oldLines.length, endLineNumber: oldLines.length, startColumn: (oldLines[oldLines.length - 1] || "").length + 1, endColumn: (oldLines[oldLines.length - 1] || "").length + 1 },
-                text: "\n" + newLines.slice(oldLines.length).join("\n"),
-              });
-              break;
-            } else if (newLine === undefined) {
-              edits.push({
-                range: { startLineNumber: i + 1, endLineNumber: oldLines.length, startColumn: 1, endColumn: (oldLines[oldLines.length - 1] || "").length + 1 },
-                text: "",
-              });
-              break;
-            } else if (oldLine !== newLine) {
-              edits.push({
-                range: { startLineNumber: i + 1, endLineNumber: i + 1, startColumn: 1, endColumn: oldLine.length + 1 },
-                text: newLine,
-              });
-            }
+        const maxLen = Math.max(oldLines.length, newLines.length);
+        for (let i = 0; i < maxLen; i++) {
+          const oldLine = oldLines[i];
+          const newLine = newLines[i];
+          if (oldLine === undefined) {
+            edits.push({
+              range: { startLineNumber: oldLines.length, endLineNumber: oldLines.length, startColumn: (oldLines[oldLines.length - 1] || "").length + 1, endColumn: (oldLines[oldLines.length - 1] || "").length + 1 },
+              text: "\n" + newLines.slice(oldLines.length).join("\n"),
+            });
+            break;
+          } else if (newLine === undefined) {
+            edits.push({
+              range: { startLineNumber: i + 1, endLineNumber: oldLines.length, startColumn: 1, endColumn: (oldLines[oldLines.length - 1] || "").length + 1 },
+              text: "",
+            });
+            break;
+          } else if (oldLine !== newLine) {
+            edits.push({
+              range: { startLineNumber: i + 1, endLineNumber: i + 1, startColumn: 1, endColumn: oldLine.length + 1 },
+              text: newLine,
+            });
           }
+        }
 
-          if (edits.length > 0) {
-            const savedPos = ed.getPosition();
-            const savedSel = ed.getSelection();
-            remoteUpdate.current = true;
-            ed.executeEdits("remote", edits);
-            if (savedPos) ed.setPosition(savedPos);
-            if (savedSel) ed.setSelection(savedSel);
-          }
-          if (activeTab === "html") setCode(newCode);
+        if (edits.length > 0) {
+          const savedPos = ed.getPosition();
+          const savedSel = ed.getSelection();
+          remoteUpdate.current = true;
+          ed.executeEdits("remote", edits);
+          if (savedPos) ed.setPosition(savedPos);
+          if (savedSel) ed.setSelection(savedSel);
         }
       });
       ch.on("presence", { event: "sync" }, () => {
