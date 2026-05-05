@@ -16,6 +16,8 @@ import {
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { registerSnippets } from "@/lib/editorSnippets";
 import { registerAiCompletions } from "@/lib/aiCompletions";
 import { buildPreviewHtml, openPreviewInNewTab } from "@/lib/runnerPreview";
@@ -75,50 +77,53 @@ const Editor_ = () => {
       const ch = supabase.channel(`project:${projectId}`, { config: { presence: { key: user?.id || "anon" } } });
       ch.on("postgres_changes", { event: "UPDATE", schema: "public", table: "projects", filter: `id=eq.${projectId}` }, (payload) => {
         const newCode = (payload.new as any).code;
+        if (newCode === undefined) return;
+        // Ignore echo of our own save
+        if (newCode === lastSentCodeRef.current) return;
+        // Always keep latest html in state
+        setCode(newCode);
+        // Only patch the editor if user is currently viewing the HTML tab
         const ed = editorRef.current;
-        if (newCode !== undefined && ed && newCode !== ed.getValue()) {
-          // Ignore echo of our own save
-          if (newCode === lastSentCodeRef.current) return;
+        if (!ed || activeTabRef.current !== "html") return;
+        if (newCode === ed.getValue()) return;
 
-          // Smart diff-apply: only change lines that differ so cursor stays in place
-          const model = ed.getModel();
-          const oldLines = model.getLinesContent() as string[];
-          const newLines = newCode.split("\n");
-          const edits: any[] = [];
+        // Smart diff-apply: only change lines that differ so cursor stays in place
+        const model = ed.getModel();
+        const oldLines = model.getLinesContent() as string[];
+        const newLines = newCode.split("\n");
+        const edits: any[] = [];
 
-          const maxLen = Math.max(oldLines.length, newLines.length);
-          for (let i = 0; i < maxLen; i++) {
-            const oldLine = oldLines[i];
-            const newLine = newLines[i];
-            if (oldLine === undefined) {
-              edits.push({
-                range: { startLineNumber: oldLines.length, endLineNumber: oldLines.length, startColumn: (oldLines[oldLines.length - 1] || "").length + 1, endColumn: (oldLines[oldLines.length - 1] || "").length + 1 },
-                text: "\n" + newLines.slice(oldLines.length).join("\n"),
-              });
-              break;
-            } else if (newLine === undefined) {
-              edits.push({
-                range: { startLineNumber: i + 1, endLineNumber: oldLines.length, startColumn: 1, endColumn: (oldLines[oldLines.length - 1] || "").length + 1 },
-                text: "",
-              });
-              break;
-            } else if (oldLine !== newLine) {
-              edits.push({
-                range: { startLineNumber: i + 1, endLineNumber: i + 1, startColumn: 1, endColumn: oldLine.length + 1 },
-                text: newLine,
-              });
-            }
+        const maxLen = Math.max(oldLines.length, newLines.length);
+        for (let i = 0; i < maxLen; i++) {
+          const oldLine = oldLines[i];
+          const newLine = newLines[i];
+          if (oldLine === undefined) {
+            edits.push({
+              range: { startLineNumber: oldLines.length, endLineNumber: oldLines.length, startColumn: (oldLines[oldLines.length - 1] || "").length + 1, endColumn: (oldLines[oldLines.length - 1] || "").length + 1 },
+              text: "\n" + newLines.slice(oldLines.length).join("\n"),
+            });
+            break;
+          } else if (newLine === undefined) {
+            edits.push({
+              range: { startLineNumber: i + 1, endLineNumber: oldLines.length, startColumn: 1, endColumn: (oldLines[oldLines.length - 1] || "").length + 1 },
+              text: "",
+            });
+            break;
+          } else if (oldLine !== newLine) {
+            edits.push({
+              range: { startLineNumber: i + 1, endLineNumber: i + 1, startColumn: 1, endColumn: oldLine.length + 1 },
+              text: newLine,
+            });
           }
+        }
 
-          if (edits.length > 0) {
-            const savedPos = ed.getPosition();
-            const savedSel = ed.getSelection();
-            remoteUpdate.current = true;
-            ed.executeEdits("remote", edits);
-            if (savedPos) ed.setPosition(savedPos);
-            if (savedSel) ed.setSelection(savedSel);
-          }
-          if (activeTab === "html") setCode(newCode);
+        if (edits.length > 0) {
+          const savedPos = ed.getPosition();
+          const savedSel = ed.getSelection();
+          remoteUpdate.current = true;
+          ed.executeEdits("remote", edits);
+          if (savedPos) ed.setPosition(savedPos);
+          if (savedSel) ed.setSelection(savedSel);
         }
       });
       ch.on("presence", { event: "sync" }, () => {
@@ -290,8 +295,11 @@ const Editor_ = () => {
       "ИИ анализирует..."
     );
     try {
+      // Use code from the currently active editor (html/css/js tab)
+      const currentCode = editorRef.current?.getValue() ?? code;
+      const lang = activeTab === "css" ? "css" : activeTab === "js" ? "javascript" : project.language;
       const { data, error } = await supabase.functions.invoke("ai-fix", {
-        body: { code, language: project.language, mode, instruction },
+        body: { code: currentCode, language: lang, mode, instruction },
       });
       toast.dismiss(tId);
       if (error || (data as any)?.error) {
@@ -302,7 +310,11 @@ const Editor_ = () => {
       if (mode === "explain" || mode === "ask") {
         setAiAnswer(result);
       } else {
-        setCode(result);
+        // Apply result to the active tab
+        if (activeTab === "html") setCode(result);
+        else if (activeTab === "css") setLinkedCss(result);
+        else setLinkedJs(result);
+        editorRef.current?.setValue(result);
         toast.success(mode === "fix" ? "Код исправлен ✨" : "Код сгенерирован ✨");
       }
     } catch (e: any) {
@@ -381,9 +393,15 @@ const Editor_ = () => {
           </Popover>
 
           <Dialog open={!!aiAnswer} onOpenChange={(o) => !o && setAiAnswer("")}>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
               <DialogHeader><DialogTitle className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Ответ ИИ</DialogTitle></DialogHeader>
-              <div className="text-sm whitespace-pre-wrap leading-relaxed">{aiAnswer}</div>
+              <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none prose-pre:bg-secondary prose-pre:text-foreground prose-code:text-primary prose-code:before:content-none prose-code:after:content-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiAnswer}</ReactMarkdown>
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(aiAnswer); toast.success("Скопировано"); }}>Копировать</Button>
+                <Button size="sm" onClick={() => setAiAnswer("")}>Закрыть</Button>
+              </div>
             </DialogContent>
           </Dialog>
 
