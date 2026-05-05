@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     const data = await resp.json();
     let result: string = data.choices?.[0]?.message?.content ?? "";
     // Strip markdown code fences if present
-    if (mode !== "explain") {
+    if (mode !== "explain" && mode !== "ask") {
       result = result.replace(/^```[a-zA-Z]*\n?/m, "").replace(/```\s*$/m, "").trim();
     }
 
