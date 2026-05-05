@@ -92,7 +92,7 @@ export const registerAiCompletions = (monaco: any, getLanguage: () => LangKey) =
     freeInlineCompletions: () => {},
   };
 
-  for (const lang of ["python", "javascript", "html", "css", "go", "java"]) {
+  for (const lang of SUPPORTED_LANGS) {
     monaco.languages.registerInlineCompletionsProvider(lang, provider);
   }
 };
