@@ -19,14 +19,19 @@ Deno.serve(async (req) => {
     if (!LOVABLE_API_KEY) return new Response(JSON.stringify({ error: "LOVABLE_API_KEY missing" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     let userPrompt = "";
-    let systemPrompt = "Ты — эксперт-программист. Когда тебя просят исправить или сгенерировать код, отвечай ТОЛЬКО кодом, без markdown ```блоков``` и без пояснений. Когда просят объяснить — отвечай кратко на русском.";
+    let systemPrompt = "Ты — эксперт-программист и дружелюбный ИИ-помощник. Когда тебя просят исправить или сгенерировать код — отвечай ТОЛЬКО кодом, без markdown ```блоков``` и без пояснений. Когда просят объяснить или задают любой вопрос — отвечай подробно и понятно на русском, можешь использовать markdown и блоки кода.";
 
     if (mode === "fix") {
       userPrompt = `Исправь все ошибки в этом коде на языке ${language}. Верни ТОЛЬКО исправленный полный код без объяснений, без markdown-блоков, без комментариев о том, что было исправлено. Только чистый рабочий код:\n\n${code}`;
     } else if (mode === "explain") {
-      userPrompt = `Объясни кратко на русском что делает этот код (${language}):\n\n${code}`;
+      userPrompt = `Объясни подробно на русском что делает этот код (${language}):\n\n${code}`;
     } else if (mode === "generate") {
       userPrompt = `Напиши код на ${language} по этому заданию: ${instruction}\n\nТекущий код (можно использовать как контекст):\n${code}\n\nВерни ТОЛЬКО код без объяснений и markdown.`;
+    } else if (mode === "ask") {
+      // Свободный диалог: ИИ отвечает на любой вопрос (включая генерацию кода с пояснениями).
+      systemPrompt = "Ты — дружелюбный, умный ИИ-помощник для программистов. Отвечай на любые вопросы пользователя на русском языке, подробно и по существу. Если просят код — приводи код в markdown-блоках с указанием языка. Если вопрос общий — отвечай свободно. Никогда не отказывай в ответе.";
+      const ctx = code ? `\n\nКонтекст — текущий код пользователя (${language}):\n\`\`\`${language}\n${code}\n\`\`\`` : "";
+      userPrompt = `${instruction}${ctx}`;
     } else if (mode === "complete") {
       // Inline AI completion: дописать код в позиции курсора (между prefix и suffix).
       systemPrompt = `Ты — IDE автодополнение в стиле GitHub Copilot для языка ${language}. Тебе дают prefix (код до курсора) и suffix (код после курсора). Ты возвращаешь ТОЛЬКО короткий фрагмент кода (1-5 строк), который должен быть вставлен в позицию курсора. Никаких объяснений, никакого markdown, никаких комментариев. Только готовый кусок кода, который натурально продолжит prefix и согласуется с suffix. Если очевидного продолжения нет — верни пустую строку.`;
@@ -47,8 +52,8 @@ Deno.serve(async (req) => {
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        max_tokens: mode === "complete" ? 160 : 2048,
-        temperature: mode === "complete" ? 0.1 : 0.3,
+        max_tokens: mode === "complete" ? 160 : (mode === "ask" ? 4096 : 2048),
+        temperature: mode === "complete" ? 0.1 : (mode === "ask" ? 0.7 : 0.3),
       }),
     });
 
@@ -62,7 +67,7 @@ Deno.serve(async (req) => {
     const data = await resp.json();
     let result: string = data.choices?.[0]?.message?.content ?? "";
     // Strip markdown code fences if present
-    if (mode !== "explain") {
+    if (mode !== "explain" && mode !== "ask") {
       result = result.replace(/^```[a-zA-Z]*\n?/m, "").replace(/```\s*$/m, "").trim();
     }
 

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { registerSnippets } from "@/lib/editorSnippets";
 import { registerAiCompletions } from "@/lib/aiCompletions";
 import { buildPreviewHtml, openPreviewInNewTab } from "@/lib/runnerPreview";
@@ -34,6 +35,8 @@ const Editor_ = () => {
   const [collaborators, setCollaborators] = useState(0);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiInstruction, setAiInstruction] = useState("");
+  const [aiAsk, setAiAsk] = useState("");
+  const [aiAnswer, setAiAnswer] = useState<string>("");
   const [runSignal, setRunSignal] = useState(0);
   const isShared = !!invite;
   const saveTimerRef = useRef<number | null>(null);
@@ -277,10 +280,15 @@ const Editor_ = () => {
     toast.success(`Тема: ${t}`);
   };
 
-  const callAi = async (mode: "fix" | "generate" | "explain", instruction = "") => {
+  const callAi = async (mode: "fix" | "generate" | "explain" | "ask", instruction = "") => {
     if (!project) return;
     setAiBusy(true);
-    const tId = toast.loading(mode === "fix" ? "ИИ исправляет код..." : mode === "generate" ? "ИИ пишет код..." : "ИИ анализирует...");
+    const tId = toast.loading(
+      mode === "fix" ? "ИИ исправляет код..." :
+      mode === "generate" ? "ИИ пишет код..." :
+      mode === "ask" ? "ИИ думает..." :
+      "ИИ анализирует..."
+    );
     try {
       const { data, error } = await supabase.functions.invoke("ai-fix", {
         body: { code, language: project.language, mode, instruction },
@@ -291,8 +299,8 @@ const Editor_ = () => {
         return;
       }
       const result = (data as any).result as string;
-      if (mode === "explain") {
-        toast.message("Объяснение от ИИ", { description: result, duration: 15000 });
+      if (mode === "explain" || mode === "ask") {
+        setAiAnswer(result);
       } else {
         setCode(result);
         toast.success(mode === "fix" ? "Код исправлен ✨" : "Код сгенерирован ✨");
@@ -347,7 +355,7 @@ const Editor_ = () => {
                 {aiBusy ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <Sparkles className="w-4 h-4 text-primary" />}
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-72 space-y-2">
+            <PopoverContent align="end" className="w-80 space-y-2 max-h-[80vh] overflow-y-auto">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">ИИ-помощник ({lconf?.name})</p>
               <Button size="sm" variant="secondary" className="w-full justify-start" disabled={aiBusy} onClick={() => callAi("fix")}>
                 <Sparkles className="w-3 h-3 mr-2" />Исправить ошибки
@@ -362,8 +370,22 @@ const Editor_ = () => {
                   Сгенерировать
                 </Button>
               </div>
+              <div className="space-y-1 pt-1 border-t border-border">
+                <p className="text-xs text-muted-foreground">Спросить ИИ о чём угодно:</p>
+                <Textarea value={aiAsk} onChange={(e) => setAiAsk(e.target.value)} placeholder="Как работает useEffect? / Что такое async?..." className="text-xs min-h-[60px]" />
+                <Button size="sm" variant="default" className="w-full" disabled={aiBusy || !aiAsk.trim()} onClick={() => { callAi("ask", aiAsk); setAiAsk(""); }}>
+                  Спросить
+                </Button>
+              </div>
             </PopoverContent>
           </Popover>
+
+          <Dialog open={!!aiAnswer} onOpenChange={(o) => !o && setAiAnswer("")}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader><DialogTitle className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-primary" /> Ответ ИИ</DialogTitle></DialogHeader>
+              <div className="text-sm whitespace-pre-wrap leading-relaxed">{aiAnswer}</div>
+            </DialogContent>
+          </Dialog>
 
           <div className="hidden md:flex items-center">
             <Button variant="ghost" size="icon" onClick={() => setFontSize((f) => Math.max(8, f - 1))} title="Уменьшить"><ZoomOut className="w-4 h-4" /></Button>
