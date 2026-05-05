@@ -279,10 +279,15 @@ const Editor_ = () => {
     toast.success(`Тема: ${t}`);
   };
 
-  const callAi = async (mode: "fix" | "generate" | "explain", instruction = "") => {
+  const callAi = async (mode: "fix" | "generate" | "explain" | "ask", instruction = "") => {
     if (!project) return;
     setAiBusy(true);
-    const tId = toast.loading(mode === "fix" ? "ИИ исправляет код..." : mode === "generate" ? "ИИ пишет код..." : "ИИ анализирует...");
+    const tId = toast.loading(
+      mode === "fix" ? "ИИ исправляет код..." :
+      mode === "generate" ? "ИИ пишет код..." :
+      mode === "ask" ? "ИИ думает..." :
+      "ИИ анализирует..."
+    );
     try {
       const { data, error } = await supabase.functions.invoke("ai-fix", {
         body: { code, language: project.language, mode, instruction },
@@ -293,8 +298,8 @@ const Editor_ = () => {
         return;
       }
       const result = (data as any).result as string;
-      if (mode === "explain") {
-        toast.message("Объяснение от ИИ", { description: result, duration: 15000 });
+      if (mode === "explain" || mode === "ask") {
+        setAiAnswer(result);
       } else {
         setCode(result);
         toast.success(mode === "fix" ? "Код исправлен ✨" : "Код сгенерирован ✨");
