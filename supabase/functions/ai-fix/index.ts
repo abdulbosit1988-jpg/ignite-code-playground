@@ -52,8 +52,8 @@ Deno.serve(async (req) => {
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        max_tokens: mode === "complete" ? 160 : 2048,
-        temperature: mode === "complete" ? 0.1 : 0.3,
+        max_tokens: mode === "complete" ? 160 : (mode === "ask" ? 4096 : 2048),
+        temperature: mode === "complete" ? 0.1 : (mode === "ask" ? 0.7 : 0.3),
       }),
     });
 
