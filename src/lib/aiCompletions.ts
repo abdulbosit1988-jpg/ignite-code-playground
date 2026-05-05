@@ -39,7 +39,7 @@ const fetchCompletion = async (language: LangKey, prefix: string, suffix: string
 
 // Дебаунс по позиции — не дёргаем AI на каждый символ.
 let debounceTimer: number | null = null;
-const debouncedSuggestion = (language: LangKey, prefix: string, suffix: string, delay = 220): Promise<string> =>
+const debouncedSuggestion = (language: LangKey, prefix: string, suffix: string, delay = 120): Promise<string> =>
   new Promise((resolve) => {
     if (debounceTimer) window.clearTimeout(debounceTimer);
     debounceTimer = window.setTimeout(async () => {
@@ -47,6 +47,8 @@ const debouncedSuggestion = (language: LangKey, prefix: string, suffix: string, 
       resolve(r);
     }, delay);
   });
+
+const SUPPORTED_LANGS = ["python", "javascript", "typescript", "html", "css", "go", "java", "cpp", "c", "csharp", "php", "ruby", "rust", "sql"];
 
 export const registerAiCompletions = (monaco: any, getLanguage: () => LangKey) => {
   if (registered) return;
