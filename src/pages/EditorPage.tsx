@@ -16,6 +16,8 @@ import {
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { registerSnippets } from "@/lib/editorSnippets";
 import { registerAiCompletions } from "@/lib/aiCompletions";
 import { buildPreviewHtml, openPreviewInNewTab } from "@/lib/runnerPreview";
