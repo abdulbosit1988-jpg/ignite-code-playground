@@ -295,8 +295,11 @@ const Editor_ = () => {
       "ИИ анализирует..."
     );
     try {
+      // Use code from the currently active editor (html/css/js tab)
+      const currentCode = editorRef.current?.getValue() ?? code;
+      const lang = activeTab === "css" ? "css" : activeTab === "js" ? "javascript" : project.language;
       const { data, error } = await supabase.functions.invoke("ai-fix", {
-        body: { code, language: project.language, mode, instruction },
+        body: { code: currentCode, language: lang, mode, instruction },
       });
       toast.dismiss(tId);
       if (error || (data as any)?.error) {
@@ -307,7 +310,11 @@ const Editor_ = () => {
       if (mode === "explain" || mode === "ask") {
         setAiAnswer(result);
       } else {
-        setCode(result);
+        // Apply result to the active tab
+        if (activeTab === "html") setCode(result);
+        else if (activeTab === "css") setLinkedCss(result);
+        else setLinkedJs(result);
+        editorRef.current?.setValue(result);
         toast.success(mode === "fix" ? "Код исправлен ✨" : "Код сгенерирован ✨");
       }
     } catch (e: any) {
