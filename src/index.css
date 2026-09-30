@@ -2,38 +2,50 @@
 @tailwind components;
 @tailwind utilities;
 
+@import "@fontsource/rubik/400.css";
+@import "@fontsource/rubik/500.css";
+@import "@fontsource/rubik/600.css";
+@import "@fontsource/space-mono/400.css";
+@import "@fontsource/space-mono/700.css";
+
 /* Online Coding — IDE-inspired design system. All HSL. */
 @layer base {
   :root {
-    --background: 222 24% 8%;
-    --foreground: 210 40% 98%;
+    --background: 216 11% 12%;
+    --foreground: 0 0% 98%;
 
-    --card: 222 24% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 210 2% 60%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 222 24% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 216 10% 16%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 152 76% 48%;
-    --primary-foreground: 222 47% 8%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 257 77% 20%;
 
-    --secondary: 222 20% 16%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 0 0% 100% / 0.09;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 222 18% 18%;
-    --muted-foreground: 215 16% 65%;
+    --muted: 210 2% 60%;
+    --muted-foreground: 0 0% 82%;
 
-    --accent: 199 89% 56%;
-    --accent-foreground: 222 47% 8%;
+    --accent: 196 90% 32%;
+    --accent-foreground: 0 0% 98%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 222 20% 20%;
-    --input: 222 20% 16%;
-    --ring: 152 76% 48%;
+    --border: 0 0% 100% / 0.16;
+    --input: 0 0% 100% / 0.1;
+    --ring: 0 0% 100%;
 
-    --radius: 0.6rem;
+    --radius: 1rem;
+    --glass: 0 0% 100%;
+    --orb-violet: 257 77% 31%;
+    --orb-magenta: 285 43% 40%;
+    --orb-cyan: 196 90% 32%;
+    --success: 145 63% 49%;
+    --warning: 42 92% 56%;
 
     /* IDE accents */
     --editor-bg: 222 26% 9%;
@@ -51,9 +63,9 @@
     --grade-2: 0 84% 60%;
     --grade-absent: 220 9% 50%;
 
-    --gradient-hero: linear-gradient(135deg, hsl(152 76% 48% / 0.25), hsl(199 89% 56% / 0.25), hsl(286 60% 67% / 0.25));
-    --gradient-glow: radial-gradient(circle at 50% 0%, hsl(152 76% 48% / 0.35), transparent 60%);
-    --shadow-glow: 0 0 40px hsl(152 76% 48% / 0.35);
+    --gradient-hero: linear-gradient(135deg, hsl(var(--orb-violet) / 0.9), hsl(var(--orb-cyan) / 0.8));
+    --gradient-glow: none;
+    --shadow-glow: 0 18px 70px hsl(var(--orb-violet) / 0.3);
     --shadow-elegant: 0 20px 60px -10px hsl(222 47% 4% / 0.6);
 
     --sidebar-background: 222 24% 9%;
@@ -75,11 +87,63 @@
   html, body, #root { height: 100%; }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
-    background-image: var(--gradient-glow);
-    background-attachment: fixed;
+    font-family: 'Rubik', system-ui, sans-serif;
+    letter-spacing: 0;
   }
-  code, pre, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  code, pre, .mono, .font-heading { font-family: 'Space Mono', ui-monospace, monospace; }
+}
+
+@layer components {
+  .landing-shell { @apply relative isolate bg-background; }
+  .landing-shell::before { content: ""; @apply pointer-events-none fixed inset-0 -z-20; background: linear-gradient(145deg, hsl(var(--background)), hsl(210 2% 28%)); }
+  .glass-panel { @apply rounded-[28px] border border-glass/20 bg-glass/10 shadow-[var(--shadow-elegant)] backdrop-blur-2xl; }
+  .brand-mark, .feature-icon, .motion-icon { @apply flex shrink-0 items-center justify-center border border-glass/20 bg-glass/10; }
+  .brand-mark { @apply h-10 w-10 rounded-2xl text-foreground; }
+  .feature-icon { @apply h-11 w-11 rounded-2xl text-foreground; }
+  .motion-icon { @apply h-9 w-9 rounded-xl; }
+  .eyebrow { @apply inline-flex items-center gap-2 rounded-full border border-glass/20 bg-glass/10 px-4 py-2 text-xs font-medium; }
+  .preview-dot { @apply h-2.5 w-2.5 rounded-full; }
+  .status-pulse { @apply h-2 w-2 rounded-full bg-success shadow-[0_0_12px_hsl(var(--success))]; }
+  .syntax-purple { color: hsl(var(--orb-magenta)); }
+  .syntax-blue { color: hsl(190 80% 68%); }
+  .syntax-green { color: hsl(145 56% 65%); }
+  .syntax-muted { color: hsl(var(--muted-foreground) / 0.7); }
+  .collab-stack { @apply flex items-center; }
+  .collab-stack span { @apply -ml-2 flex h-12 w-12 items-center justify-center rounded-full border-2 border-glass/30 bg-glass/15 font-heading text-sm first:ml-0; }
+  .feature-tile { @apply min-h-[240px] transition-transform duration-300 hover:-translate-y-1; }
+  .motion-control { @apply fixed bottom-4 left-1/2 z-40 w-[min(360px,calc(100%-2rem))] -translate-x-1/2 p-4 md:bottom-6 md:left-auto md:right-6 md:w-72 md:translate-x-0; }
+}
+
+@layer utilities {
+  .bg-glass { background-color: hsl(var(--glass)); }
+  .border-glass { border-color: hsl(var(--glass) / 0.2); }
+  .bg-success { background-color: hsl(var(--success)); }
+  .bg-warning { background-color: hsl(var(--warning)); }
+}
+
+.ambient-field { --pointer-x: 0px; --pointer-y: 0px; --ambient-duration: 16s; position: fixed; inset: 0; z-index: -10; overflow: hidden; pointer-events: none; }
+.ambient-orb { position: absolute; display: block; border-radius: 9999px; filter: blur(72px); opacity: .8; will-change: transform; transition: transform .45s cubic-bezier(.2,.8,.2,1), opacity .35s ease; }
+.ambient-orb-one { left: -6%; top: -8%; width: min(48vw, 620px); aspect-ratio: 1; background: hsl(var(--orb-violet)); transform: translate(calc(var(--pointer-x) * .8), calc(var(--pointer-y) * .8)); }
+.ambient-orb-two { right: -10%; top: 28%; width: min(42vw, 560px); aspect-ratio: 1; background: hsl(var(--orb-cyan)); transform: translate(calc(var(--pointer-x) * -1), calc(var(--pointer-y) * -.7)); }
+.ambient-orb-three { left: 18%; bottom: -20%; width: min(40vw, 520px); aspect-ratio: 1; background: hsl(var(--orb-magenta)); transform: translate(calc(var(--pointer-x) * .55), calc(var(--pointer-y) * -1)); }
+.ambient-paused .ambient-orb { transform: none; opacity: .58; }
+.ambient-auto .ambient-orb-one { animation: ambient-one var(--ambient-duration) ease-in-out infinite alternate; }
+.ambient-auto .ambient-orb-two { animation: ambient-two calc(var(--ambient-duration) * 1.2) ease-in-out infinite alternate; }
+.ambient-auto .ambient-orb-three { animation: ambient-three calc(var(--ambient-duration) * .9) ease-in-out infinite alternate; }
+
+@keyframes ambient-one { to { transform: translate(24vw, 18vh) scale(1.12); } }
+@keyframes ambient-two { to { transform: translate(-28vw, 20vh) scale(.88); } }
+@keyframes ambient-three { to { transform: translate(30vw, -22vh) scale(1.08); } }
+
+@media (max-width: 767px) {
+  .ambient-orb { filter: blur(54px); }
+  .ambient-orb-one { width: 78vw; }
+  .ambient-orb-two { width: 82vw; }
+  .ambient-orb-three { width: 72vw; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-auto .ambient-orb, .feature-tile { animation: none; transition: none; }
 }
 
 @layer utilities {

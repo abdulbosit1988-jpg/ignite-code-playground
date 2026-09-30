@@ -20,6 +20,9 @@ export default {
         accent: { DEFAULT: "hsl(var(--accent))", foreground: "hsl(var(--accent-foreground))" },
         popover: { DEFAULT: "hsl(var(--popover))", foreground: "hsl(var(--popover-foreground))" },
         card: { DEFAULT: "hsl(var(--card))", foreground: "hsl(var(--card-foreground))" },
+        glass: "hsl(var(--glass))",
+        success: "hsl(var(--success))",
+        warning: "hsl(var(--warning))",
         editor: "hsl(var(--editor-bg))",
         terminal: "hsl(var(--terminal-bg))",
         grade: {
